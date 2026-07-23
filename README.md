@@ -1,16 +1,18 @@
 # font setting for coloros16
 
-作者：**yuzlyn**  
-版本：**v1.2.0**  
-模块 ID：`font_setting_coloros16`
+- 作者：**yuzlyn**
+- 版本：**v1.2.1**
+- 模块 ID：`font_setting_coloros16`
 
 这是一个面向 ColorOS 16 的 KernelSU 字体模块。模块提供离线 WebUI，可分别上传中文和西文 `.ttf` 文件，并通过 KernelSU 的 systemless mount 替换字体映射，不直接修改系统分区。
 
 ## 下载
 
-- 安装包：[font_setting_for_coloros16_v1.2.0_KSU.zip](./font_setting_for_coloros16_v1.2.0_KSU.zip)
-- 文件大小：`32,808,079` 字节（约 31.3 MiB）
-- SHA-256：`913B34DACE13A0C9719C2C8453532DAA7FAD4766FB3D43288B3ECCF78C95EC1E`
+- 安装包：[font_setting_for_coloros16_v1.2.1_KSU.zip](./font_setting_for_coloros16_v1.2.1_KSU.zip)
+- 文件大小：`32,807,752` 字节（约 31.3 MiB）
+- SHA-256：`C6D99069A12D763A6B065B4C177E97F13CC4CFFA55E68FF4284A8224F13FA30C`
+
+v1.2.1 将字体上传和配置读取的自定义波浪进度条替换为 MDUI 的标准 Material 线性进度条，上传时显示确定进度，读取配置时显示默认不确定进度动画。
 
 v1.2.0 按 Material 3 Expressive 设置页结构重构 WebUI：使用位置固定的 48dp Top App Bar 与文档流大标题；折叠态由 40dp 标题/图标和上下各 4dp 间隙组成，大标题完全没入顶栏后才弹入紧凑标题，顶栏本身不改变高度和位置。连接状态和 Monet 色值使用带前导状态图标的 AssistChip；字体区域改为带 40dp 图标容器的 ListItem-in-Card，并加入可动态更新的 Linear Wavy Progress Indicator。页面只读取系统 Monet 取色，不提供手动配色选择。标题下方提供使用真实 GitHub 头像的作者胶囊，页面底部提供源码仓库卡片；两者均指向 yuzlyn 对应的 GitHub 页面。
 
@@ -31,7 +33,7 @@ v1.0.1 修复 KernelSU 3.2.4 新版三参数异步 `ksu.exec` 接口兼容问题
 ## 安装
 
 1. 在 KernelSU 中停用其他字体替换模块，尤其是 `PixelFonts`、`TPTQ Ping Round SC + Caesium VF` 和 `tptq_and_googlesans`。
-2. 在 KernelSU 模块页面安装 `font_setting_for_coloros16_v1.2.0_KSU.zip`。
+2. 在 KernelSU 模块页面安装 `font_setting_for_coloros16_v1.2.1_KSU.zip`。
 3. 重启手机，使模块及内置默认字体首次生效。
 4. 回到 KernelSU 模块页面，打开本模块的 WebUI。
 5. 分别选择中文和西文 TTF，等待进度条完成。
@@ -58,7 +60,7 @@ WebUI 通过 root bridge 读取 `theme_customization_overlay_packages` 中的 Mo
 
 页面背景使用 `surface-container`，字体与系统卡片使用单一的 `surface-container-low` 大色块。卡片采用 35dp 圆角，不使用硬描边、内嵌白色内容层或阴影。字体类型 FilterChip 与分段按钮轨道使用 `surface-container-highest`；KernelSU 已连接状态使用 `primary-container` / `on-primary-container`；上传操作使用 Filled Tonal Button，并以 `primary-container` 提供强调层级。Chip、操作按钮和分段选择器均为 Full Shape。重启按钮禁用时使用 12% `onSurface` 背景和 38% `onSurface` 文字。亮色与暗色模式均直接使用 MaterialKolor 动态方案生成的对应 token。
 
-上传字体时，对应字体卡片显示确定进度的波浪线；读取模块配置时，页面顶部显示不确定进度的动态波浪线。减少动态效果的系统偏好开启后，动画会自动降级。
+上传字体时，对应字体卡片显示确定进度的 Material 直线进度条；读取模块配置时，页面顶部显示默认的不确定线性进度动画。减少动态效果的系统偏好开启后，动画会自动降级。
 
 中文字体使用“文”作为前导图标；西文字体使用纯西文 `Aa` 图标，不使用带中文“文”的翻译图标。
 
@@ -129,10 +131,10 @@ node visual-check.mjs
 在 `FontSetting_ColorOS16` 目录中使用支持 ZIP 的 bsdtar 打包，可确保 ZIP 内路径使用 Android 兼容的 `/`：
 
 ```powershell
-tar -a -c -f ..\font_setting_for_coloros16_v1.2.0_KSU.zip *
+tar -a -c -f ..\font_setting_for_coloros16_v1.2.1_KSU.zip *
 ```
 
-本版本已完成以下检查：四份 XML 可解析；静态/可变轴数量符合配置；所有 shell 脚本通过设备 BusyBox `sh -n`；上传提交和 XML 切换在设备临时目录完成闭环；Monet 种子读取正确且页面不存在配色选择器；Monet AssistChip 不可交互；Surface Container 层级、状态色和控件色与动态 token 一致；卡片 35dp、无边框且无阴影；前导图标容器为 40dp；西文图标仅包含 `Aa`；作者头像成功离线加载且 GitHub 主页/源码仓库链接准确；Chip 和按钮为 Full Shape；顶栏固定为 48dp、标题上下间隙各 4dp，切换前后坐标及高度保持不变；波浪进度可正确映射 0-100% 数值；禁用按钮符合 12%/38% 透明度；390×844 与 1280×900 的亮色和暗色页面均无横向溢出；最终 ZIP 已通过 Android `unzip -t`。
+本版本已完成以下检查：四份 XML 可解析；静态/可变轴数量符合配置；所有 shell 脚本通过设备 BusyBox `sh -n`；上传提交和 XML 切换在设备临时目录完成闭环；Monet 种子读取正确且页面不存在配色选择器；Monet AssistChip 不可交互；Surface Container 层级、状态色和控件色与动态 token 一致；卡片 35dp、无边框且无阴影；前导图标容器为 40dp；西文图标仅包含 `Aa`；作者头像成功离线加载且 GitHub 主页/源码仓库链接准确；Chip 和按钮为 Full Shape；顶栏固定为 48dp、标题上下间隙各 4dp，切换前后坐标及高度保持不变；Material 线性进度可正确映射 0-100% 数值；禁用按钮符合 12%/38% 透明度；390×844 与 1280×900 的亮色和暗色页面均无横向溢出；最终 ZIP 已通过 Android `unzip -t`。
 
 ## 许可与来源
 

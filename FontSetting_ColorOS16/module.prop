@@ -1,6 +1,6 @@
 id=font_setting_coloros16
 name=font setting for coloros16
-version=v1.2.0
-versionCode=120
+version=v1.2.1
+versionCode=121
 author=yuzlyn
 description=通过 KernelSU WebUI 上传中文与西文 TTF，并应用到 ColorOS 16。

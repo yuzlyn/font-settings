@@ -253,18 +253,19 @@ function showMessage(message) {
   snackbar.open = true;
 }
 
-function setWavyProgress(element, value) {
+function setProgress(element, value) {
   const number = Math.max(0, Math.min(1, Number(value) || 0));
   const percent = Math.round(number * 100);
-  element.classList.remove("indeterminate");
-  element.querySelector(".wave-value").style.strokeDasharray = `${percent} ${100 - percent}`;
+  element.value = number;
   element.setAttribute("aria-valuenow", String(percent));
 }
 
 function setIndeterminate(element, active) {
   element.classList.toggle("hidden", !active);
-  element.classList.toggle("indeterminate", active);
-  if (active) element.removeAttribute("aria-valuenow");
+  if (active) {
+    element.value = undefined;
+    element.removeAttribute("aria-valuenow");
+  }
 }
 
 function updateTopBarTitle() {
@@ -344,7 +345,7 @@ function setBusy(role, busy) {
   current.button.disabled = busy;
   current.fileInput.disabled = busy;
   current.progress.classList.toggle("hidden", !busy);
-  if (busy) setWavyProgress(current.progress, 0);
+  if (busy) setProgress(current.progress, 0);
   document.querySelector("#refresh-button").disabled = busy;
   rebootButton.disabled = busy || rebootChip.classList.contains("hidden");
 }
@@ -363,7 +364,7 @@ async function uploadFont(role, file) {
   uploadInProgress = true;
   const current = roles[role];
   setBusy(role, true);
-  setWavyProgress(current.progress, 0);
+  setProgress(current.progress, 0);
 
   try {
     const info = await inspectFont(file);
@@ -373,7 +374,7 @@ async function uploadFont(role, file) {
       const end = Math.min(offset + CHUNK_SIZE, file.size);
       const bytes = new Uint8Array(await file.slice(offset, end).arrayBuffer());
       await appendChunk(role, bytes);
-      setWavyProgress(current.progress, end / file.size);
+      setProgress(current.progress, end / file.size);
       await new Promise((resolve) => requestAnimationFrame(resolve));
     }
 

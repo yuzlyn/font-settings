@@ -112,7 +112,7 @@ for (const viewport of viewports) {
       hasLargeTitle: Boolean(document.querySelector(".large-title #page-title")),
       hasBackIcon: Boolean(document.querySelector("#back-button svg")),
       hasRefreshIcon: Boolean(document.querySelector("#refresh-button svg")),
-      hasWavyProgress: document.querySelectorAll(".wavy-progress .wave-value").length === 3,
+      hasLinearProgress: document.querySelectorAll("mdui-linear-progress").length === 3,
       footerCentered: style("footer").justifyContent === "center",
       authorHref: authorLink.href,
       authorUsesPrimary: tokenMatches(authorStyle.backgroundColor, "primary") &&
@@ -133,11 +133,13 @@ for (const viewport of viewports) {
     };
   });
 
-  const progressCheck = await page.evaluate(() => {
+  const progressCheck = await page.evaluate(async () => {
     const progress = document.querySelector("#chinese-progress");
-    setWavyProgress(progress, 0.46);
+    setProgress(progress, 0.46);
+    await progress.updateComplete;
     return {
-      dash: progress.querySelector(".wave-value").style.strokeDasharray,
+      width: progress.shadowRoot.querySelector(".determinate").style.width,
+      height: getComputedStyle(progress).height,
       value: progress.getAttribute("aria-valuenow"),
     };
   });
@@ -204,8 +206,8 @@ for (const viewport of viewports) {
   if (titleCheck.initialOpacity !== "0" || titleCheck.collapsedOpacity !== "1" || !titleCheck.submerged || !titleCheck.stableTop || !titleCheck.stableHeight || titleCheck.barHeight !== 48 || Math.abs(titleCheck.topGap - titleCheck.bottomGap) > 0.5 || titleCheck.topGap > 4.5 || titleCheck.restoredOpacity !== "0") {
     throw new Error(`${testName} app bar threshold mismatch: ${JSON.stringify(titleCheck)}`);
   }
-  if (!layout.hasWavyProgress || progressCheck.dash !== "46, 54" || progressCheck.value !== "46") {
-    throw new Error(`${testName} wavy progress mismatch: ${JSON.stringify({ layout, progressCheck })}`);
+  if (!layout.hasLinearProgress || progressCheck.width !== "46%" || progressCheck.height !== "4px" || progressCheck.value !== "46") {
+    throw new Error(`${testName} linear progress mismatch: ${JSON.stringify({ layout, progressCheck })}`);
   }
   if (!disabledCheck[0].includes("0.12") || !disabledCheck[1].includes("0.38") || !layout.footerCentered) {
     throw new Error(`${testName} disabled or footer state mismatch: ${JSON.stringify({ layout, disabledCheck })}`);

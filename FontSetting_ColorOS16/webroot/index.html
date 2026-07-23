@@ -6,10 +6,10 @@
     <meta name="color-scheme" content="light dark">
     <title>字体设置</title>
     <link rel="stylesheet" href="vendor/mdui.css">
-    <link rel="stylesheet" href="styles.css?v=120-m3e5">
+    <link rel="stylesheet" href="styles.css?v=121-m3-linear-progress">
     <script src="vendor/mdui.global.js"></script>
     <script src="vendor/material-kolor.js"></script>
-    <script src="app.js?v=120-m3e5" defer></script>
+    <script src="app.js?v=121-m3-linear-progress" defer></script>
   </head>
   <body>
     <mdui-top-app-bar variant="small" scroll-behavior="elevate">
@@ -63,12 +63,7 @@
 
       </section>
 
-      <div id="page-progress" class="wavy-progress hidden" role="progressbar" aria-label="正在加载字体配置" aria-valuemin="0" aria-valuemax="100">
-        <svg viewBox="0 0 480 12" preserveAspectRatio="none" aria-hidden="true">
-          <path class="wave-track" pathLength="100" d="M0 6q6-6 12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0"></path>
-          <path class="wave-value" pathLength="100" d="M0 6q6-6 12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0"></path>
-        </svg>
-      </div>
+      <mdui-linear-progress id="page-progress" class="page-progress hidden" role="progressbar" aria-label="正在加载字体配置" aria-valuemin="0" aria-valuemax="100"></mdui-linear-progress>
 
       <mdui-card id="conflict-card" variant="filled" class="message-card hidden" role="status">
         <div class="message-icon" aria-hidden="true">
@@ -92,12 +87,7 @@
             <mdui-chip id="chinese-type" variant="filter" class="type-chip">读取中</mdui-chip>
             <mdui-button id="chinese-upload" variant="tonal" class="select-button">选择中文 TTF</mdui-button>
           </div>
-          <div id="chinese-progress" class="wavy-progress hidden" role="progressbar" aria-label="正在上传中文字体" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-            <svg viewBox="0 0 480 12" preserveAspectRatio="none" aria-hidden="true">
-              <path class="wave-track" pathLength="100" d="M0 6q6-6 12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0"></path>
-              <path class="wave-value" pathLength="100" d="M0 6q6-6 12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0"></path>
-            </svg>
-          </div>
+          <mdui-linear-progress id="chinese-progress" class="font-progress hidden" value="0" role="progressbar" aria-label="正在上传中文字体" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></mdui-linear-progress>
           <input id="chinese-file" type="file" accept=".ttf,font/ttf" hidden>
         </mdui-card>
 
@@ -114,12 +104,7 @@
             <mdui-chip id="western-type" variant="filter" class="type-chip">读取中</mdui-chip>
             <mdui-button id="western-upload" variant="tonal" class="select-button">选择西文 TTF</mdui-button>
           </div>
-          <div id="western-progress" class="wavy-progress hidden" role="progressbar" aria-label="正在上传西文字体" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-            <svg viewBox="0 0 480 12" preserveAspectRatio="none" aria-hidden="true">
-              <path class="wave-track" pathLength="100" d="M0 6q6-6 12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0"></path>
-              <path class="wave-value" pathLength="100" d="M0 6q6-6 12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0"></path>
-            </svg>
-          </div>
+          <mdui-linear-progress id="western-progress" class="font-progress hidden" value="0" role="progressbar" aria-label="正在上传西文字体" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></mdui-linear-progress>
           <input id="western-file" type="file" accept=".ttf,font/ttf" hidden>
         </mdui-card>
       </section>
@@ -155,7 +140,7 @@
       </a>
 
       <footer aria-label="版本信息">
-        <span>v1.2.0</span>
+        <span>v1.2.1</span>
         <span aria-hidden="true">·</span>
         <span>yuzlyn</span>
       </footer>

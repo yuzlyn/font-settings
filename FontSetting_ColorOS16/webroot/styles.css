@@ -312,50 +312,16 @@ h2 {
   color: rgb(var(--mdui-color-on-primary-container));
 }
 
-.wavy-progress {
-  width: 100%;
-  height: 12px;
-  margin: 8px 0;
-  overflow: hidden;
-  color: rgb(var(--mdui-color-primary));
-}
-
-.font-card > .wavy-progress {
-  width: calc(100% - 48px);
-  margin: -8px 24px 18px;
-}
-
-.wavy-progress svg {
+.page-progress {
   display: block;
   width: 100%;
-  height: 12px;
-  overflow: visible;
+  margin: 8px 0;
 }
 
-.wave-track,
-.wave-value {
-  fill: none;
-  stroke-linecap: round;
-  stroke-width: 2.5;
-}
-
-.wave-track {
-  stroke: rgb(var(--mdui-color-surface-container-highest));
-}
-
-.wave-value {
-  stroke: currentColor;
-  stroke-dasharray: 0 100;
-  transition: stroke-dasharray 180ms linear;
-}
-
-.wavy-progress.indeterminate .wave-value {
-  stroke-dasharray: 22 78;
-  animation: wave-travel 1.1s linear infinite;
-}
-
-@keyframes wave-travel {
-  to { stroke-dashoffset: -100; }
+.font-card > .font-progress {
+  display: block;
+  width: calc(100% - 48px);
+  margin: -8px 24px 18px;
 }
 
 .message-card {
