@@ -1,0 +1,23 @@
+# Build and package-manager caches
+.fontsetting-build/
+.npm-cache/
+node_modules/
+
+# ADB and local visual-debug artifacts
+phone-window.xml
+fontsetting-phone.png
+*-temp.*
+*.tmp
+
+# Unrelated source modules and old local release packages
+PixelFonts_ColorOS16/
+TPTQ_Ping_Round_SC_Caesium_VF/
+PixelFonts_for_ColorOS16_KSU.zip
+TPTQ_Ping_Round_SC_Caesium_VF_KSU.zip
+font_setting_for_coloros16_v1.1.0_KSU.zip
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-CN" class="mdui-theme-auto">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
+    <title>字体设置</title>
+    <link rel="stylesheet" href="vendor/mdui.css">
+    <link rel="stylesheet" href="styles.css?v=120-m3e5">
+    <script src="vendor/mdui.global.js"></script>
+    <script src="vendor/material-kolor.js"></script>
+    <script src="app.js?v=120-m3e5" defer></script>
+  </head>
+  <body>
+    <mdui-top-app-bar variant="small" scroll-behavior="elevate">
+      <mdui-button-icon id="back-button" aria-label="返回" title="返回">
+        <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2Z"></path>
+        </svg>
+      </mdui-button-icon>
+      <mdui-top-app-bar-title id="compact-title" aria-hidden="true">字体设置</mdui-top-app-bar-title>
+      <mdui-button-icon id="refresh-button" aria-label="刷新" title="刷新">
+        <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.9 9h-2.03A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35Z"></path>
+        </svg>
+      </mdui-button-icon>
+    </mdui-top-app-bar>
+
+    <main>
+      <header class="large-title" aria-labelledby="page-title">
+        <h1 id="page-title">字体设置</h1>
+      </header>
+
+      <a class="author-link" href="https://github.com/yuzlyn" target="_blank" rel="noopener noreferrer" aria-label="访问 yuzlyn 的 GitHub 主页">
+        <img class="github-avatar" src="assets/yuzlyn-github.png" alt="yuzlyn 的 GitHub 头像">
+        <span class="author-id">@yuzlyn</span>
+        <svg class="author-arrow" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42L17.59 5H14V3ZM5 5h6V3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-6h-2v6H5V5Z"></path>
+        </svg>
+      </a>
+
+      <section class="controls" aria-label="连接与配色">
+        <div class="state-row" aria-live="polite">
+          <mdui-chip id="bridge-chip" variant="assist" class="status-chip">
+            <svg slot="icon" class="chip-icon status-indicator" viewBox="0 0 18 18" aria-hidden="true">
+              <circle cx="9" cy="9" r="4"></circle>
+            </svg>
+            <span id="bridge-label">正在连接 KernelSU</span>
+          </mdui-chip>
+          <mdui-chip id="reboot-chip" variant="assist" class="hidden">
+            <svg slot="icon" class="chip-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M17.65 6.35A7.95 7.95 0 0 0 12 4V1L8 5l4 4V6a6 6 0 1 1-5.65 4H4.26A8 8 0 1 0 17.65 6.35Z"></path>
+            </svg>
+            等待重启
+          </mdui-chip>
+          <mdui-chip id="monet-chip" variant="assist">
+            <svg slot="icon" class="chip-icon monet-indicator" viewBox="0 0 18 18" aria-hidden="true">
+              <circle cx="9" cy="9" r="6"></circle>
+            </svg>
+            <span id="monet-label">Monet</span>
+          </mdui-chip>
+        </div>
+
+      </section>
+
+      <div id="page-progress" class="wavy-progress hidden" role="progressbar" aria-label="正在加载字体配置" aria-valuemin="0" aria-valuemax="100">
+        <svg viewBox="0 0 480 12" preserveAspectRatio="none" aria-hidden="true">
+          <path class="wave-track" pathLength="100" d="M0 6q6-6 12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0"></path>
+          <path class="wave-value" pathLength="100" d="M0 6q6-6 12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0"></path>
+        </svg>
+      </div>
+
+      <mdui-card id="conflict-card" variant="filled" class="message-card hidden" role="status">
+        <div class="message-icon" aria-hidden="true">
+          <svg class="ui-icon" viewBox="0 0 24 24"><path d="M12 2 1 21h22L12 2Zm1 16h-2v-2h2v2Zm0-4h-2v-4h2v4Z"></path></svg>
+        </div>
+        <div class="message-copy">
+          <h2>字体模块冲突</h2>
+          <p id="conflict-text"></p>
+        </div>
+      </mdui-card>
+
+      <section class="font-list" aria-label="字体文件">
+        <mdui-card variant="filled" class="font-card">
+          <div class="list-item">
+            <div class="leading-icon" aria-hidden="true"><span>文</span></div>
+            <div class="item-copy">
+              <h2>中文字体</h2>
+              <p id="chinese-name" class="font-name">读取中</p>
+              <p id="chinese-meta" class="font-meta">--</p>
+            </div>
+            <mdui-chip id="chinese-type" variant="filter" class="type-chip">读取中</mdui-chip>
+            <mdui-button id="chinese-upload" variant="tonal" class="select-button">选择中文 TTF</mdui-button>
+          </div>
+          <div id="chinese-progress" class="wavy-progress hidden" role="progressbar" aria-label="正在上传中文字体" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <svg viewBox="0 0 480 12" preserveAspectRatio="none" aria-hidden="true">
+              <path class="wave-track" pathLength="100" d="M0 6q6-6 12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0"></path>
+              <path class="wave-value" pathLength="100" d="M0 6q6-6 12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0"></path>
+            </svg>
+          </div>
+          <input id="chinese-file" type="file" accept=".ttf,font/ttf" hidden>
+        </mdui-card>
+
+        <mdui-card variant="filled" class="font-card">
+          <div class="list-item">
+            <div class="leading-icon" aria-hidden="true">
+              <span class="latin-icon">Aa</span>
+            </div>
+            <div class="item-copy">
+              <h2>西文字体</h2>
+              <p id="western-name" class="font-name">读取中</p>
+              <p id="western-meta" class="font-meta">--</p>
+            </div>
+            <mdui-chip id="western-type" variant="filter" class="type-chip">读取中</mdui-chip>
+            <mdui-button id="western-upload" variant="tonal" class="select-button">选择西文 TTF</mdui-button>
+          </div>
+          <div id="western-progress" class="wavy-progress hidden" role="progressbar" aria-label="正在上传西文字体" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <svg viewBox="0 0 480 12" preserveAspectRatio="none" aria-hidden="true">
+              <path class="wave-track" pathLength="100" d="M0 6q6-6 12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0"></path>
+              <path class="wave-value" pathLength="100" d="M0 6q6-6 12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0"></path>
+            </svg>
+          </div>
+          <input id="western-file" type="file" accept=".ttf,font/ttf" hidden>
+        </mdui-card>
+      </section>
+
+      <mdui-card variant="filled" class="system-card">
+        <div class="list-item system-item">
+          <div class="leading-icon system-icon" aria-hidden="true">
+            <svg class="ui-icon" viewBox="0 0 24 24"><path d="M4 6h16v10H4V6Zm-2 12h20v2H2v-2Zm4-10v6h12V8H6Z"></path></svg>
+          </div>
+          <div class="item-copy">
+            <h2>系统状态</h2>
+            <p id="system-status" class="font-meta">正在读取模块状态</p>
+          </div>
+          <mdui-button id="reboot-button" variant="tonal" disabled>重启应用</mdui-button>
+        </div>
+      </mdui-card>
+
+      <a class="source-link" href="https://github.com/yuzlyn/font-setting-for-coloros16" target="_blank" rel="noopener noreferrer" aria-label="打开字体设置源码仓库">
+        <mdui-card variant="filled" class="source-card">
+          <div class="source-content">
+            <div class="source-icon" aria-hidden="true">
+              <svg class="ui-icon" viewBox="0 0 24 24"><path d="M12 .7a11.5 11.5 0 0 0-3.64 22.4c.58.1.79-.25.79-.56v-2.23c-3.22.7-3.9-1.37-3.9-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.17.08 1.78 1.2 1.78 1.2 1.04 1.78 2.72 1.27 3.38.97.1-.75.4-1.27.74-1.56-2.57-.3-5.28-1.29-5.28-5.69 0-1.26.45-2.29 1.2-3.1-.12-.3-.52-1.47.11-3.06 0 0 .98-.31 3.16 1.19a10.98 10.98 0 0 1 5.74 0c2.19-1.5 3.16-1.19 3.16-1.19.63 1.59.23 2.76.11 3.06.75.81 1.2 1.84 1.2 3.1 0 4.42-2.71 5.39-5.29 5.68.42.36.79 1.06.79 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .7Z"></path></svg>
+            </div>
+            <div class="source-copy">
+              <h2>源码仓库</h2>
+              <p>github.com/yuzlyn/font-setting-for-coloros16</p>
+            </div>
+            <svg class="source-arrow" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42L17.59 5H14V3ZM5 5h6V3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-6h-2v6H5V5Z"></path>
+            </svg>
+          </div>
+        </mdui-card>
+      </a>
+
+      <footer aria-label="版本信息">
+        <span>v1.2.0</span>
+        <span aria-hidden="true">·</span>
+        <span>yuzlyn</span>
+      </footer>
+    </main>
+
+    <mdui-dialog id="reboot-dialog" headline="重启手机？" description="未保存的应用状态会丢失，重启后新字体生效。">
+      <mdui-button slot="action" variant="text" id="cancel-reboot">取消</mdui-button>
+      <mdui-button slot="action" variant="filled" id="confirm-reboot">重启</mdui-button>
+    </mdui-dialog>
+
+    <mdui-snackbar id="snackbar" closeable></mdui-snackbar>
+  </body>
+</html>

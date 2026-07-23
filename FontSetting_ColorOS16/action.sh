@@ -1,0 +1,5 @@
+#!/system/bin/sh
+
+echo "font setting for coloros16"
+echo "请在 KernelSU 模块列表中点击 WebUI 按钮管理字体。"
+
