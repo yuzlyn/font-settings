@@ -28,10 +28,21 @@ const ABOUT_TRANSLATIONS = {
     qqGroup: "QQ群 1082347624",
     donateTitle: "捐赠作者",
     donateSubtitle: "支付宝",
+    donateHeading: "给一点支持",
+    donateDescription: "模块免费提供，由我独立开发和维护。功能上新、适配、排查与维护都需要大量投入。如果它让你开心了一点，欢迎在此支持模块的长期开发。",
     paymentMethods: "支付方式",
     alipayAlt: "支付宝收款二维码",
     wechatPay: "微信支付",
     wechatAlt: "微信支付收款二维码",
+    wechatReward: "微信赞赏",
+    previewWechat: "放大微信支付二维码",
+    previewAlipay: "放大支付宝收款二维码",
+    paymentPreview: "支付二维码预览",
+    closePreview: "关闭预览",
+    donateThanks: "免费的模块，真的要捐赠吗",
+    donateConfirmTitle: "你确定吗",
+    cancelDonate: "取消",
+    confirmDonate: "确定",
   },
   "zh-TW": {
     back: "返回",
@@ -62,10 +73,21 @@ const ABOUT_TRANSLATIONS = {
     qqGroup: "QQ 群組 1082347624",
     donateTitle: "贊助作者",
     donateSubtitle: "支付寶",
+    donateHeading: "給一點支持",
+    donateDescription: "模組免費提供，由我獨立開發和維護。功能更新、適配、排查與維護都需要大量投入。如果它讓你開心了一點，歡迎在此支持模組的長期開發。",
     paymentMethods: "付款方式",
     alipayAlt: "支付寶收款 QR Code",
     wechatPay: "微信支付",
     wechatAlt: "微信支付收款 QR Code",
+    wechatReward: "微信贊賞",
+    previewWechat: "放大微信支付 QR Code",
+    previewAlipay: "放大支付寶收款 QR Code",
+    paymentPreview: "付款 QR Code 預覽",
+    closePreview: "關閉預覽",
+    donateThanks: "免費的模組，真的要贊助嗎",
+    donateConfirmTitle: "你確定嗎",
+    cancelDonate: "取消",
+    confirmDonate: "確定",
   },
   "en-US": {
     back: "Back",
@@ -96,10 +118,21 @@ const ABOUT_TRANSLATIONS = {
     qqGroup: "QQ group 1082347624",
     donateTitle: "Support the author",
     donateSubtitle: "Alipay",
+    donateHeading: "Give a little support",
+    donateDescription: "This module is free. Continued development, compatibility work, and maintenance take time. If it has helped you, thank you for supporting its future development.",
     paymentMethods: "Payment methods",
     alipayAlt: "Alipay payment QR code",
     wechatPay: "WeChat Pay",
     wechatAlt: "WeChat Pay QR code",
+    wechatReward: "WeChat reward",
+    previewWechat: "Enlarge WeChat Pay QR code",
+    previewAlipay: "Enlarge Alipay payment QR code",
+    paymentPreview: "Payment QR code preview",
+    closePreview: "Close preview",
+    donateThanks: "A free module, do you really want to donate?",
+    donateConfirmTitle: "Are you sure?",
+    cancelDonate: "Cancel",
+    confirmDonate: "Confirm",
   },
 };
 
@@ -181,6 +214,55 @@ function initialize() {
   document.querySelector("#about-back").addEventListener("click", () => {
     if (window.history.length > 1) window.history.back();
     else window.location.href = "index.html";
+  });
+  initializePaymentPreview();
+}
+
+function initializePaymentPreview() {
+  const preview = document.querySelector("#payment-preview");
+  if (!preview) return;
+
+  const confirmation = document.querySelector("#donate-confirm");
+  let pendingTrigger = null;
+
+  const image = preview.querySelector("img");
+  const close = () => {
+    preview.hidden = true;
+    image.src = "";
+  };
+  const open = (trigger) => {
+    image.src = trigger.dataset.paymentPreview;
+    image.alt = t(trigger.dataset.paymentAltKey);
+    preview.hidden = false;
+    preview.querySelector(".payment-preview-close").focus();
+  };
+  const closeConfirmation = () => {
+    confirmation.hidden = true;
+    pendingTrigger = null;
+  };
+  const requestConfirmation = (trigger) => {
+    pendingTrigger = trigger;
+    confirmation.hidden = false;
+    confirmation.querySelector(".donate-confirm-accept").focus();
+  };
+
+  document.querySelectorAll("[data-payment-preview]").forEach((button) => {
+    button.addEventListener("click", () => requestConfirmation(button));
+  });
+  preview.querySelectorAll(".payment-preview-backdrop, .payment-preview-close").forEach((button) => {
+    button.addEventListener("click", close);
+  });
+  confirmation.querySelectorAll(".donate-confirm-backdrop, .donate-confirm-cancel").forEach((button) => {
+    button.addEventListener("click", closeConfirmation);
+  });
+  confirmation.querySelector(".donate-confirm-accept").addEventListener("click", () => {
+    const trigger = pendingTrigger;
+    closeConfirmation();
+    if (trigger) open(trigger);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !preview.hidden) close();
+    else if (event.key === "Escape" && !confirmation.hidden) closeConfirmation();
   });
 }
 

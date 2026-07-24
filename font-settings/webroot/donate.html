@@ -24,23 +24,54 @@
         <h1 data-i18n="donateTitle">Support the author</h1>
       </header>
 
-      <section class="payment-list" aria-label="Payment methods" data-i18n-aria-label="paymentMethods">
-        <figure class="payment-figure">
-          <figcaption data-i18n="donateSubtitle">Alipay</figcaption>
-          <img src="assets/alipay.jpg" alt="Alipay payment QR code" data-i18n-alt="alipayAlt" width="1080" height="1816">
-        </figure>
+      <section class="donate-card" aria-label="Payment methods" data-i18n-aria-label="paymentMethods">
+        <div class="donate-card-heading">
+          <svg class="donate-heading-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35 10.55 20C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.51L12 21.35Z"></path></svg>
+          <h2 data-i18n="donateHeading">Give a little support</h2>
+        </div>
+        <p class="donate-copy" data-i18n="donateDescription">This module is free. Continued development, compatibility work, and maintenance take time. If it has helped you, thank you for supporting its future development.</p>
 
-        <hr class="payment-divider">
+        <div class="payment-grid">
+          <figure class="payment-figure">
+            <button class="payment-image-button" type="button" data-payment-preview="assets/wechat.png" data-payment-alt-key="wechatAlt" aria-label="Enlarge WeChat Pay QR code" data-i18n-aria-label="previewWechat">
+              <img src="assets/wechat.png" alt="WeChat Pay QR code" data-i18n-alt="wechatAlt" width="1118" height="1536">
+            </button>
+            <figcaption data-i18n="wechatReward">WeChat reward</figcaption>
+          </figure>
 
-        <figure class="payment-figure">
-          <figcaption data-i18n="wechatPay">WeChat Pay</figcaption>
-          <img src="assets/wechat.png" alt="WeChat Pay QR code" data-i18n-alt="wechatAlt" width="1118" height="1536">
-        </figure>
+          <figure class="payment-figure">
+            <button class="payment-image-button" type="button" data-payment-preview="assets/alipay.jpg" data-payment-alt-key="alipayAlt" aria-label="Enlarge Alipay payment QR code" data-i18n-aria-label="previewAlipay">
+              <img src="assets/alipay.jpg" alt="Alipay payment QR code" data-i18n-alt="alipayAlt" width="1080" height="1816">
+            </button>
+            <figcaption data-i18n="donateSubtitle">Alipay</figcaption>
+          </figure>
+        </div>
 
-        <p class="token-support">token支援</p>
+        <p class="donate-thanks" data-i18n="donateThanks">A free module, do you really want to donate?</p>
       </section>
 
       <footer>v2.2.1 · yuzlyn</footer>
     </main>
+
+    <div class="payment-preview" id="payment-preview" hidden role="dialog" aria-modal="true" aria-label="Payment QR code preview" data-i18n-aria-label="paymentPreview">
+      <button class="payment-preview-backdrop" type="button" tabindex="-1" aria-label="Close preview" data-i18n-aria-label="closePreview"></button>
+      <div class="payment-preview-content" role="document">
+        <button class="payment-preview-close" type="button" aria-label="Close preview" data-i18n-aria-label="closePreview">
+          <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.3 5.71 16.89 4.29 12 9.17 7.11 4.29 5.7 5.71 10.59 10.59 5.7 15.48l1.41 1.41L12 12l4.89 4.89 1.41-1.41-4.89-4.89 4.89-4.88Z"></path></svg>
+        </button>
+        <img src="" alt="">
+      </div>
+    </div>
+
+    <div class="donate-confirm" id="donate-confirm" hidden role="dialog" aria-modal="true" aria-label="Donation confirmation" data-i18n-aria-label="donateConfirmTitle">
+      <button class="donate-confirm-backdrop" type="button" tabindex="-1" aria-label="Cancel" data-i18n-aria-label="cancelDonate"></button>
+      <div class="donate-confirm-content" role="document">
+        <p data-i18n="donateConfirmTitle">Are you sure?</p>
+        <div class="donate-confirm-actions">
+          <button class="donate-confirm-cancel" type="button" data-i18n="cancelDonate">Cancel</button>
+          <button class="donate-confirm-accept" type="button" data-i18n="confirmDonate">Confirm</button>
+        </div>
+      </div>
+    </div>
   </body>
 </html>
