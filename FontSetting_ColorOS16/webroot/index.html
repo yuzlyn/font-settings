@@ -1,25 +1,25 @@
 <!doctype html>
-<html lang="zh-CN" class="mdui-theme-auto">
+<html lang="en-US" class="mdui-theme-auto">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="color-scheme" content="light dark">
-    <title>字体设置</title>
+    <title>Font settings</title>
     <link rel="stylesheet" href="vendor/mdui.css">
-    <link rel="stylesheet" href="styles.css?v=121-m3-linear-progress">
+    <link rel="stylesheet" href="styles.css?v=220-donate">
     <script src="vendor/mdui.global.js"></script>
     <script src="vendor/material-kolor.js"></script>
-    <script src="app.js?v=121-m3-linear-progress" defer></script>
+    <script src="app.js?v=220-donate" defer></script>
   </head>
   <body>
     <mdui-top-app-bar variant="small" scroll-behavior="elevate">
-      <mdui-button-icon id="back-button" aria-label="返回" title="返回">
+      <mdui-button-icon id="back-button" aria-label="Back" title="Back" data-i18n-aria-label="back" data-i18n-title="back">
         <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2Z"></path>
         </svg>
       </mdui-button-icon>
-      <mdui-top-app-bar-title id="compact-title" aria-hidden="true">字体设置</mdui-top-app-bar-title>
-      <mdui-button-icon id="refresh-button" aria-label="刷新" title="刷新">
+      <mdui-top-app-bar-title id="compact-title" aria-hidden="true" data-i18n="pageTitle">Font settings</mdui-top-app-bar-title>
+      <mdui-button-icon id="refresh-button" aria-label="Refresh" title="Refresh" data-i18n-aria-label="refresh" data-i18n-title="refresh">
         <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.9 9h-2.03A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35Z"></path>
         </svg>
@@ -28,30 +28,30 @@
 
     <main>
       <header class="large-title" aria-labelledby="page-title">
-        <h1 id="page-title">字体设置</h1>
+        <h1 id="page-title" data-i18n="pageTitle">Font settings</h1>
       </header>
 
-      <a class="author-link" href="https://github.com/yuzlyn" target="_blank" rel="noopener noreferrer" aria-label="访问 yuzlyn 的 GitHub 主页">
-        <img class="github-avatar" src="assets/yuzlyn-github.png" alt="yuzlyn 的 GitHub 头像">
+      <a class="author-link" href="https://github.com/yuzlyn" target="_blank" rel="noopener noreferrer" aria-label="Open yuzlyn's GitHub profile" data-i18n-aria-label="authorLinkLabel">
+        <img class="github-avatar" src="assets/yuzlyn-github.png" alt="yuzlyn's GitHub avatar" data-i18n-alt="authorAvatarAlt">
         <span class="author-id">@yuzlyn</span>
         <svg class="author-arrow" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42L17.59 5H14V3ZM5 5h6V3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-6h-2v6H5V5Z"></path>
         </svg>
       </a>
 
-      <section class="controls" aria-label="连接与配色">
+      <section class="controls" aria-label="Connection and colors" data-i18n-aria-label="controlsLabel">
         <div class="state-row" aria-live="polite">
           <mdui-chip id="bridge-chip" variant="assist" class="status-chip">
             <svg slot="icon" class="chip-icon status-indicator" viewBox="0 0 18 18" aria-hidden="true">
               <circle cx="9" cy="9" r="4"></circle>
             </svg>
-            <span id="bridge-label">正在连接 KernelSU</span>
+            <span id="bridge-label" data-i18n="connectingKernelSU">Connecting to KernelSU</span>
           </mdui-chip>
           <mdui-chip id="reboot-chip" variant="assist" class="hidden">
             <svg slot="icon" class="chip-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M17.65 6.35A7.95 7.95 0 0 0 12 4V1L8 5l4 4V6a6 6 0 1 1-5.65 4H4.26A8 8 0 1 0 17.65 6.35Z"></path>
             </svg>
-            等待重启
+            <span data-i18n="restartPending">Restart pending</span>
           </mdui-chip>
           <mdui-chip id="monet-chip" variant="assist">
             <svg slot="icon" class="chip-icon monet-indicator" viewBox="0 0 18 18" aria-hidden="true">
@@ -63,31 +63,31 @@
 
       </section>
 
-      <mdui-linear-progress id="page-progress" class="page-progress hidden" role="progressbar" aria-label="正在加载字体配置" aria-valuemin="0" aria-valuemax="100"></mdui-linear-progress>
+      <mdui-linear-progress id="page-progress" class="page-progress hidden" role="progressbar" aria-label="Loading font configuration" data-i18n-aria-label="loadingFontConfig" aria-valuemin="0" aria-valuemax="100"></mdui-linear-progress>
 
       <mdui-card id="conflict-card" variant="filled" class="message-card hidden" role="status">
         <div class="message-icon" aria-hidden="true">
           <svg class="ui-icon" viewBox="0 0 24 24"><path d="M12 2 1 21h22L12 2Zm1 16h-2v-2h2v2Zm0-4h-2v-4h2v4Z"></path></svg>
         </div>
         <div class="message-copy">
-          <h2>字体模块冲突</h2>
+          <h2 data-i18n="fontModuleConflict">Font module conflict</h2>
           <p id="conflict-text"></p>
         </div>
       </mdui-card>
 
-      <section class="font-list" aria-label="字体文件">
+      <section class="font-list" aria-label="Font files" data-i18n-aria-label="fontFilesLabel">
         <mdui-card variant="filled" class="font-card">
           <div class="list-item">
             <div class="leading-icon" aria-hidden="true"><span>文</span></div>
             <div class="item-copy">
-              <h2>中文字体</h2>
-              <p id="chinese-name" class="font-name">读取中</p>
+              <h2 data-i18n="chineseFont">Chinese font</h2>
+              <p id="chinese-name" class="font-name" data-i18n="loading">Loading</p>
               <p id="chinese-meta" class="font-meta">--</p>
             </div>
-            <mdui-chip id="chinese-type" variant="filter" class="type-chip">读取中</mdui-chip>
-            <mdui-button id="chinese-upload" variant="tonal" class="select-button">选择中文 TTF</mdui-button>
+            <mdui-chip id="chinese-type" variant="filter" class="type-chip" data-i18n="loading">Loading</mdui-chip>
+            <mdui-button id="chinese-upload" variant="tonal" class="select-button" data-i18n="chooseChineseTtf">Choose Chinese TTF</mdui-button>
           </div>
-          <mdui-linear-progress id="chinese-progress" class="font-progress hidden" value="0" role="progressbar" aria-label="正在上传中文字体" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></mdui-linear-progress>
+          <mdui-linear-progress id="chinese-progress" class="font-progress hidden" value="0" role="progressbar" aria-label="Uploading Chinese font" data-i18n-aria-label="uploadingChineseFont" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></mdui-linear-progress>
           <input id="chinese-file" type="file" accept=".ttf,font/ttf" hidden>
         </mdui-card>
 
@@ -97,15 +97,37 @@
               <span class="latin-icon">Aa</span>
             </div>
             <div class="item-copy">
-              <h2>西文字体</h2>
-              <p id="western-name" class="font-name">读取中</p>
+              <h2 data-i18n="latinFont">Latin font</h2>
+              <p id="western-name" class="font-name" data-i18n="loading">Loading</p>
               <p id="western-meta" class="font-meta">--</p>
             </div>
-            <mdui-chip id="western-type" variant="filter" class="type-chip">读取中</mdui-chip>
-            <mdui-button id="western-upload" variant="tonal" class="select-button">选择西文 TTF</mdui-button>
+            <mdui-chip id="western-type" variant="filter" class="type-chip" data-i18n="loading">Loading</mdui-chip>
+            <mdui-button id="western-upload" variant="tonal" class="select-button" data-i18n="chooseLatinTtf">Choose Latin TTF</mdui-button>
           </div>
-          <mdui-linear-progress id="western-progress" class="font-progress hidden" value="0" role="progressbar" aria-label="正在上传西文字体" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></mdui-linear-progress>
+          <mdui-linear-progress id="western-progress" class="font-progress hidden" value="0" role="progressbar" aria-label="Uploading Latin font" data-i18n-aria-label="uploadingLatinFont" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></mdui-linear-progress>
           <input id="western-file" type="file" accept=".ttf,font/ttf" hidden>
+        </mdui-card>
+      </section>
+
+      <section class="emoji-settings" aria-labelledby="emoji-heading">
+        <mdui-card variant="filled" class="emoji-card">
+          <div class="emoji-heading-row">
+            <div class="leading-icon emoji-leading" aria-hidden="true"><span>🙂</span></div>
+            <div class="item-copy">
+              <h2 id="emoji-heading" data-i18n="emojiSettings">Emoji settings</h2>
+              <p id="emoji-status" class="font-meta" data-i18n="loadingEmojiConfig">Loading system Emoji configuration</p>
+            </div>
+          </div>
+          <button id="emoji-picker-trigger" class="emoji-picker-trigger" type="button" aria-haspopup="dialog" aria-controls="emoji-dialog">
+            <span id="selected-emoji-preview" class="emoji-preview" aria-hidden="true">🙂</span>
+            <span class="emoji-option-copy">
+              <strong id="selected-emoji-name" data-i18n="emojiDefaultName">Keep system default</strong>
+              <small id="selected-emoji-detail" data-i18n="emojiDefaultDetail">Do not override the system Emoji font</small>
+            </span>
+            <svg class="picker-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6 1.41-1.41L17.83 12l-7.42 7.41L9 18Z"></path></svg>
+          </button>
+          <mdui-linear-progress id="emoji-progress" class="emoji-progress hidden" value="0" role="progressbar" aria-label="Uploading custom Emoji font" data-i18n-aria-label="uploadingCustomEmoji" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></mdui-linear-progress>
+          <input id="emoji-file" type="file" accept=".ttf,.otf,font/ttf,font/otf,application/font-sfnt" hidden>
         </mdui-card>
       </section>
 
@@ -115,21 +137,21 @@
             <svg class="ui-icon" viewBox="0 0 24 24"><path d="M4 6h16v10H4V6Zm-2 12h20v2H2v-2Zm4-10v6h12V8H6Z"></path></svg>
           </div>
           <div class="item-copy">
-            <h2>系统状态</h2>
-            <p id="system-status" class="font-meta">正在读取模块状态</p>
+            <h2 data-i18n="systemStatus">System status</h2>
+            <p id="system-status" class="font-meta" data-i18n="loadingModuleStatus">Loading module status</p>
           </div>
-          <mdui-button id="reboot-button" variant="tonal" disabled>重启应用</mdui-button>
+          <mdui-button id="reboot-button" variant="tonal" disabled data-i18n="restartDevice">Restart device</mdui-button>
         </div>
       </mdui-card>
 
-      <a class="source-link" href="https://github.com/yuzlyn/font-setting-for-coloros16" target="_blank" rel="noopener noreferrer" aria-label="打开字体设置源码仓库">
+      <a class="source-link" href="https://github.com/yuzlyn/font-setting-for-coloros16" target="_blank" rel="noopener noreferrer" aria-label="Open the Font settings source repository" data-i18n-aria-label="sourceLinkLabel">
         <mdui-card variant="filled" class="source-card">
           <div class="source-content">
             <div class="source-icon" aria-hidden="true">
               <svg class="ui-icon" viewBox="0 0 24 24"><path d="M12 .7a11.5 11.5 0 0 0-3.64 22.4c.58.1.79-.25.79-.56v-2.23c-3.22.7-3.9-1.37-3.9-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.17.08 1.78 1.2 1.78 1.2 1.04 1.78 2.72 1.27 3.38.97.1-.75.4-1.27.74-1.56-2.57-.3-5.28-1.29-5.28-5.69 0-1.26.45-2.29 1.2-3.1-.12-.3-.52-1.47.11-3.06 0 0 .98-.31 3.16 1.19a10.98 10.98 0 0 1 5.74 0c2.19-1.5 3.16-1.19 3.16-1.19.63 1.59.23 2.76.11 3.06.75.81 1.2 1.84 1.2 3.1 0 4.42-2.71 5.39-5.29 5.68.42.36.79 1.06.79 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .7Z"></path></svg>
             </div>
             <div class="source-copy">
-              <h2>源码仓库</h2>
+              <h2 data-i18n="sourceRepository">Source repository</h2>
               <p>github.com/yuzlyn/font-setting-for-coloros16</p>
             </div>
             <svg class="source-arrow" viewBox="0 0 24 24" aria-hidden="true">
@@ -139,16 +161,122 @@
         </mdui-card>
       </a>
 
-      <footer aria-label="版本信息">
-        <span>v1.2.1</span>
+      <section class="resource-grid" aria-label="Community and about" data-i18n-aria-label="communityLinksLabel">
+        <a id="telegram-card" class="resource-link copy-resource" href="https://t.me/fontsettings" target="_blank" rel="noopener noreferrer" data-copy-value="t.me/fontsettings" data-copy-message="telegramCopied" aria-label="Open the Telegram group" data-i18n-aria-label="telegramLinkLabel">
+          <mdui-card variant="filled" class="resource-card telegram-card">
+            <div class="resource-content">
+              <div class="resource-icon" aria-hidden="true">
+                <svg class="ui-icon" viewBox="0 0 24 24"><path d="m2.01 21 20.99-9L2.01 3 2 10l15 2-15 2 .01 7Z"></path></svg>
+              </div>
+              <div class="resource-copy">
+                <h2 data-i18n="telegramGroup">Telegram group</h2>
+                <p>t.me/fontsettings</p>
+              </div>
+              <svg class="resource-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42L17.59 5H14V3ZM5 5h6V3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-6h-2v6H5V5Z"></path></svg>
+            </div>
+          </mdui-card>
+        </a>
+
+        <a id="qq-card" class="resource-link copy-resource" href="mqqapi://card/show_pslcard?src_type=internal&amp;version=1&amp;uin=1082347624&amp;card_type=group&amp;source=qrcode" data-copy-value="1082347624" data-copy-message="qqCopied" aria-label="Open QQ group 1082347624" data-i18n-aria-label="qqLinkLabel">
+          <mdui-card variant="filled" class="resource-card qq-card">
+            <div class="resource-content">
+              <div class="resource-icon" aria-hidden="true">
+                <svg class="ui-icon" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3Zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3Zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13Zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5Z"></path></svg>
+              </div>
+              <div class="resource-copy">
+                <h2 data-i18n="qqGroup">QQ group</h2>
+                <p data-i18n="qqGroupNumber">Group 1082347624</p>
+              </div>
+              <svg class="resource-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6 1.41-1.41L17.83 12l-7.42 7.41L9 18Z"></path></svg>
+            </div>
+          </mdui-card>
+        </a>
+
+        <a id="about-card" class="resource-link" href="about.html" aria-label="Open the README about page" data-i18n-aria-label="aboutLinkLabel">
+          <mdui-card variant="filled" class="resource-card about-card">
+            <div class="resource-content">
+              <div class="resource-icon" aria-hidden="true">
+                <svg class="ui-icon" viewBox="0 0 24 24"><path d="M11 17h2v-6h-2v6Zm1-15A10 10 0 1 0 12 22 10 10 0 0 0 12 2Zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16ZM11 9h2V7h-2v2Z"></path></svg>
+              </div>
+              <div class="resource-copy">
+                <h2 data-i18n="about">About</h2>
+                <p data-i18n="aboutDetail">View README</p>
+              </div>
+              <svg class="resource-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6 1.41-1.41L17.83 12l-7.42 7.41L9 18Z"></path></svg>
+            </div>
+          </mdui-card>
+        </a>
+      </section>
+
+      <a id="donate-card" class="resource-link donate-link" href="donate.html" aria-label="Open the donation page" data-i18n-aria-label="donateLinkLabel">
+        <mdui-card variant="filled" class="resource-card donate-card">
+          <div class="resource-content donate-content">
+            <div class="resource-icon" aria-hidden="true">
+              <svg class="ui-icon" viewBox="0 0 24 24"><path d="M12 21.35 10.55 20C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09A6.03 6.03 0 0 1 16.5 3C19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.51L12 21.35Z"></path></svg>
+            </div>
+            <div class="resource-copy">
+              <h2 data-i18n="donateAuthor">Support the author</h2>
+              <p data-i18n="donateDetail">Alipay</p>
+            </div>
+            <svg class="resource-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6 1.41-1.41L17.83 12l-7.42 7.41L9 18Z"></path></svg>
+          </div>
+        </mdui-card>
+      </a>
+
+      <footer aria-label="Version information" data-i18n-aria-label="versionInfo">
+        <span>v2.2.0</span>
         <span aria-hidden="true">·</span>
         <span>yuzlyn</span>
       </footer>
     </main>
 
-    <mdui-dialog id="reboot-dialog" headline="重启手机？" description="未保存的应用状态会丢失，重启后新字体生效。">
-      <mdui-button slot="action" variant="text" id="cancel-reboot">取消</mdui-button>
-      <mdui-button slot="action" variant="filled" id="confirm-reboot">重启</mdui-button>
+    <mdui-dialog id="reboot-dialog" headline="Restart device?" description="Unsaved app state will be lost. The new fonts will take effect after restart." data-i18n-headline="restartDialogHeadline" data-i18n-description="restartDialogDescription">
+      <mdui-button slot="action" variant="text" id="cancel-reboot" data-i18n="cancel">Cancel</mdui-button>
+      <mdui-button slot="action" variant="filled" id="confirm-reboot" data-i18n="restart">Restart</mdui-button>
+    </mdui-dialog>
+
+    <mdui-dialog id="emoji-dialog" headline="Choose Emoji" data-i18n-headline="chooseEmoji">
+      <fieldset id="emoji-options" class="emoji-picker-list" aria-label="Emoji style" data-i18n-aria-label="emojiStyleLabel">
+        <label class="emoji-picker-option" data-mode="default">
+          <span class="emoji-preview neutral-preview" aria-hidden="true">
+            <svg class="ui-icon" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Zm-3.5-9A1.5 1.5 0 1 0 8.5 8a1.5 1.5 0 0 0 0 3Zm7 0A1.5 1.5 0 1 0 15.5 8a1.5 1.5 0 0 0 0 3ZM12 17c2.03 0 3.8-1.23 4.56-3H7.44A5 5 0 0 0 12 17Z"></path></svg>
+          </span>
+          <span class="emoji-option-copy"><strong data-i18n="emojiDefaultName">Keep system default</strong><small data-i18n="emojiDefaultDetail">Do not override the system Emoji font</small></span>
+          <span class="radio-indicator" aria-hidden="true"></span>
+          <input type="radio" name="emoji-mode" value="default">
+        </label>
+        <label class="emoji-picker-option" data-mode="ios">
+          <span class="emoji-preview" aria-hidden="true">🍎</span>
+          <span class="emoji-option-copy"><strong>iOS / Apple</strong><small>AppleColorEmoji.ttf</small></span>
+          <span class="radio-indicator" aria-hidden="true"></span>
+          <input type="radio" name="emoji-mode" value="ios">
+        </label>
+        <label class="emoji-picker-option" data-mode="google">
+          <span class="emoji-preview" aria-hidden="true">🤖</span>
+          <span class="emoji-option-copy"><strong>Google / Pixel</strong><small>NotoColorEmoji.ttf</small></span>
+          <span class="radio-indicator" aria-hidden="true"></span>
+          <input type="radio" name="emoji-mode" value="google">
+        </label>
+        <label class="emoji-picker-option" data-mode="blobmoji">
+          <span class="emoji-preview" aria-hidden="true">🫠</span>
+          <span class="emoji-option-copy"><strong data-i18n="emojiBlobmojiName">Classic Blobmoji</strong><small>Blobmoji.ttf</small></span>
+          <span class="radio-indicator" aria-hidden="true"></span>
+          <input type="radio" name="emoji-mode" value="blobmoji">
+        </label>
+        <label class="emoji-picker-option" data-mode="facebook">
+          <span class="emoji-preview" aria-hidden="true">💙</span>
+          <span class="emoji-option-copy"><strong>Facebook</strong><small>Facebook-Emoji.ttf</small></span>
+          <span class="radio-indicator" aria-hidden="true"></span>
+          <input type="radio" name="emoji-mode" value="facebook">
+        </label>
+        <label class="emoji-picker-option" data-mode="custom">
+          <span class="emoji-preview" aria-hidden="true">📁</span>
+          <span class="emoji-option-copy"><strong data-i18n="emojiCustomName">Custom file</strong><small id="emoji-custom-name" data-i18n="chooseTtfOrOtf">Choose a .ttf or .otf file</small></span>
+          <span class="radio-indicator" aria-hidden="true"></span>
+          <input type="radio" name="emoji-mode" value="custom">
+        </label>
+      </fieldset>
+      <mdui-button slot="action" variant="text" id="close-emoji-dialog" data-i18n="cancel">Cancel</mdui-button>
     </mdui-dialog>
 
     <mdui-snackbar id="snackbar" closeable></mdui-snackbar>

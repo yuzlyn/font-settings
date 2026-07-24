@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en-US" class="mdui-theme-auto">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
+    <title>README</title>
+    <link rel="stylesheet" href="vendor/mdui.css">
+    <link rel="stylesheet" href="about.css?v=220-donate">
+    <script src="vendor/mdui.global.js"></script>
+    <script src="about.js?v=220-donate" defer></script>
+  </head>
+  <body>
+    <mdui-top-app-bar variant="small">
+      <mdui-button-icon id="about-back" aria-label="Back" title="Back" data-i18n-aria-label="back" data-i18n-title="back">
+        <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2Z"></path></svg>
+      </mdui-button-icon>
+      <mdui-top-app-bar-title data-i18n="readme">README</mdui-top-app-bar-title>
+    </mdui-top-app-bar>
+
+    <main>
+      <header class="about-header">
+        <p class="version-label">Universal Font Settings · v2.2.0</p>
+        <h1>Universal Font Settings</h1>
+        <p class="about-lead" data-i18n="overview">A universal KernelSU module for managing system fonts and Emoji on Android 8.0 and later.</p>
+        <a class="about-author" href="https://github.com/yuzlyn" target="_blank" rel="noopener noreferrer" aria-label="Open yuzlyn's GitHub profile" data-i18n-aria-label="authorLinkLabel">
+          <img src="assets/yuzlyn-github.png" alt="yuzlyn's GitHub avatar" data-i18n-alt="authorAvatarAlt">
+          <span>@yuzlyn</span>
+        </a>
+      </header>
+
+      <article aria-label="Module README" data-i18n-aria-label="readmeLabel">
+        <section class="readme-section">
+          <h2 data-i18n="compatibilityTitle">Compatibility</h2>
+          <ul>
+            <li data-i18n="compatibilityAndroid">Android 8.0 or later (API 26+).</li>
+            <li data-i18n="compatibilityRoot">KernelSU or a compatible WebUI and systemless module implementation.</li>
+            <li data-i18n="compatibilityXml">Standard Android familyset or fonts-modification XML font configuration.</li>
+          </ul>
+          <p data-i18n="compatibilityNote">Devices using a private font engine may be rejected during installation instead of receiving an unsafe configuration.</p>
+        </section>
+
+        <section class="readme-section">
+          <h2 data-i18n="featuresTitle">Features</h2>
+          <ul>
+            <li data-i18n="featureFonts">Upload separate Chinese and Latin TTF files.</li>
+            <li data-i18n="featureEmoji">Use four built-in Emoji styles or upload a custom TTF/OTF.</li>
+            <li data-i18n="featureDetection">Detect the device's actual font XML and Emoji target filenames during installation.</li>
+            <li data-i18n="featureLanguages">WebUI languages: Simplified Chinese, Traditional Chinese for Taiwan, and English.</li>
+          </ul>
+        </section>
+
+        <section class="readme-section">
+          <h2 data-i18n="workingTitle">How it works</h2>
+          <p data-i18n="workingText">The installer backs up the device's font configuration, rewrites only the default Latin and Chinese locale families, and mounts the generated files through KernelSU. The system partition is never modified directly.</p>
+        </section>
+
+        <section class="readme-section">
+          <h2 data-i18n="emojiTitle">Built-in Emoji</h2>
+          <ul>
+            <li>iOS / Apple</li>
+            <li>Google / Pixel</li>
+            <li>Blobmoji</li>
+            <li>Facebook</li>
+          </ul>
+        </section>
+
+        <section class="readme-section">
+          <h2 data-i18n="recoveryTitle">Recovery</h2>
+          <p data-i18n="recoveryText">If fonts are missing or the system cannot start normally, disable the module through KernelSU and restart. With adb root available:</p>
+          <pre><code>adb shell su -c 'touch /data/adb/modules/font_setting_coloros16/disable'
+adb reboot</code></pre>
+        </section>
+
+        <section class="readme-section">
+          <h2 data-i18n="linksTitle">Links</h2>
+          <nav class="readme-links" aria-label="Project links" data-i18n-aria-label="projectLinksLabel">
+            <a href="https://github.com/yuzlyn/font-setting-for-coloros16" target="_blank" rel="noopener noreferrer" data-i18n="sourceRepository">Source repository</a>
+            <a href="https://t.me/fontsettings" target="_blank" rel="noopener noreferrer" data-i18n="telegramGroup">Telegram group</a>
+            <a href="mqqapi://card/show_pslcard?src_type=internal&amp;version=1&amp;uin=1082347624&amp;card_type=group&amp;source=qrcode" data-i18n="qqGroup">QQ group 1082347624</a>
+          </nav>
+        </section>
+      </article>
+
+      <footer>v2.2.0 · yuzlyn</footer>
+    </main>
+  </body>
+</html>

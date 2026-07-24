@@ -4,6 +4,10 @@ SCRIPT_DIR=${0%/*}
 MODDIR=$(cd "$SCRIPT_DIR/.." 2>/dev/null && pwd)
 DATA_DIR="$MODDIR/data"
 SYSTEM_FONT_DIR="$MODDIR/system/fonts"
+EMOJI_DIR="$MODDIR/emoji"
+EMOJI_MODE_FILE="$DATA_DIR/emoji.mode"
+EMOJI_TARGETS_FILE="$DATA_DIR/emoji.targets"
+EMOJI_CUSTOM_FILE="$DATA_DIR/emoji-custom.font"
 
 fail() {
   echo "error=$1"
@@ -26,6 +30,13 @@ role_paths() {
       VARIABLE_FILE="$DATA_DIR/western.variable"
       TEMP_FILE="$DATA_DIR/.western.upload"
       ;;
+    emoji)
+      TARGET_FILE="$EMOJI_CUSTOM_FILE"
+      ROLE_FILE="$TARGET_FILE"
+      NAME_FILE="$DATA_DIR/emoji.name.b64"
+      VARIABLE_FILE=""
+      TEMP_FILE="$DATA_DIR/.emoji.upload"
+      ;;
     *) fail "invalid_role" ;;
   esac
 }
@@ -36,17 +47,160 @@ read_flag() {
   echo "$value"
 }
 
-apply_config() {
-  western_variable="$(read_flag "$DATA_DIR/western.variable")"
-  chinese_variable="$(read_flag "$DATA_DIR/chinese.variable")"
-  config="$MODDIR/config/fonts-w${western_variable}-c${chinese_variable}.xml"
-  [ -f "$config" ] || fail "missing_config"
+read_emoji_mode() {
+  mode="$(cat "$EMOJI_MODE_FILE" 2>/dev/null)"
+  case "$mode" in
+    default|ios|google|blobmoji|facebook|custom) echo "$mode" ;;
+    *) echo "default" ;;
+  esac
+}
 
-  cp -f "$config" "$MODDIR/system/etc/fonts.xml.new" || fail "config_copy_failed"
-  cp -f "$config" "$MODDIR/system/system_ext/etc/fonts_base.xml.new" || fail "config_copy_failed"
-  chmod 0644 "$MODDIR/system/etc/fonts.xml.new" "$MODDIR/system/system_ext/etc/fonts_base.xml.new"
-  mv -f "$MODDIR/system/etc/fonts.xml.new" "$MODDIR/system/etc/fonts.xml"
-  mv -f "$MODDIR/system/system_ext/etc/fonts_base.xml.new" "$MODDIR/system/system_ext/etc/fonts_base.xml"
+apply_config() {
+  result="$(sh "$MODDIR/tools/fontconfig.sh" apply 2>&1)" || {
+    error="${result##*error=}"
+    [ -n "$error" ] || error="config_apply_failed"
+    fail "$error"
+  }
+}
+
+emoji_source() {
+  case "$1" in
+    ios) echo "$EMOJI_DIR/ios/AppleColorEmoji.ttf" ;;
+    google) echo "$EMOJI_DIR/google/NotoColorEmoji.ttf" ;;
+    blobmoji) echo "$EMOJI_DIR/blobmoji/Blobmoji.ttf" ;;
+    facebook) echo "$EMOJI_DIR/facebook/Facebook-Emoji.ttf" ;;
+    custom) echo "$EMOJI_CUSTOM_FILE" ;;
+    *) return 1 ;;
+  esac
+}
+
+valid_emoji_target() {
+  case "$1" in
+    ""|*/*|*[!A-Za-z0-9._-]*|*Flags*|*flags*|*Compat*|*compat*) return 1 ;;
+    *Emoji*.ttf|*emoji*.ttf|*Emoji*.otf|*emoji*.otf) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Print the first non-ignored und-Zsye font referenced by an Android fonts XML.
+emoji_from_config() {
+  awk '
+    BEGIN { in_family = 0; emoji_family = 0; ignored = 0; tag = "" }
+    {
+      line = $0
+      if (!in_family && line ~ /<family([[:space:]>])/) {
+        in_family = 1
+        tag = line
+      } else if (in_family && tag !~ />/) {
+        tag = tag " " line
+      }
+
+      if (in_family && tag ~ />/) {
+        emoji_family = tag ~ /lang="[^"]*und-Zsye/
+        ignored = tag ~ /ignore="true"/
+      }
+
+      if (in_family && emoji_family && !ignored) {
+        rest = line
+        while (match(rest, /[A-Za-z0-9._-]+[Ee]moji[A-Za-z0-9._-]*\.(ttf|otf)/)) {
+          name = substr(rest, RSTART, RLENGTH)
+          if (name !~ /([Ff]lags|[Cc]ompat)/) {
+            print name
+            exit
+          }
+          rest = substr(rest, RSTART + RLENGTH)
+        }
+      }
+
+      if (in_family && line ~ /<\/family>/) {
+        in_family = 0
+        emoji_family = 0
+        ignored = 0
+        tag = ""
+      }
+    }
+  ' "$1" 2>/dev/null
+}
+
+detect_emoji_target() {
+  for config in \
+    /system/etc/fonts.xml \
+    /system/etc/font_fallback.xml \
+    /system/system_ext/etc/fonts_base.xml \
+    /product/etc/fonts_customization.xml \
+    /product/etc/fonts.xml \
+    /vendor/etc/fonts.xml; do
+    [ -f "$config" ] || continue
+    candidate="$(emoji_from_config "$config")"
+    if valid_emoji_target "$candidate" && [ -e "/system/fonts/$candidate" ]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+
+  for path in \
+    /system/fonts/NotoColorEmoji.ttf \
+    /system/fonts/SamsungColorEmoji.ttf \
+    /system/fonts/NotoColorEmojiLegacy.ttf \
+    /system/fonts/*Emoji*.ttf \
+    /system/fonts/*emoji*.ttf \
+    /system/fonts/*Emoji*.otf \
+    /system/fonts/*emoji*.otf; do
+    [ -e "$path" ] || continue
+    candidate=${path##*/}
+    if valid_emoji_target "$candidate"; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+clear_emoji_overlays() {
+  [ -f "$EMOJI_TARGETS_FILE" ] || return 0
+  while IFS= read -r target; do
+    valid_emoji_target "$target" || continue
+    rm -f "$SYSTEM_FONT_DIR/$target" || return 1
+  done < "$EMOJI_TARGETS_FILE"
+  rm -f "$EMOJI_TARGETS_FILE"
+}
+
+apply_emoji() {
+  mode="$1"
+  case "$mode" in
+    default)
+      clear_emoji_overlays || fail "emoji_clear_failed"
+      printf '%s\n' "$mode" > "$EMOJI_MODE_FILE" || fail "emoji_state_failed"
+      chmod 0644 "$EMOJI_MODE_FILE"
+      touch "$DATA_DIR/pending_reboot"
+      sync
+      echo "ok=emoji"
+      return 0
+      ;;
+    ios|google|blobmoji|facebook|custom) ;;
+    *) fail "invalid_emoji_mode" ;;
+  esac
+
+  source="$(emoji_source "$mode")"
+  [ -f "$source" ] || fail "emoji_source_missing"
+  target="$(detect_emoji_target)"
+  [ -n "$target" ] || fail "emoji_target_not_found"
+  valid_emoji_target "$target" || fail "emoji_target_invalid"
+
+  mkdir -p "$DATA_DIR" "$SYSTEM_FONT_DIR" || fail "mkdir_failed"
+  cp -f "$source" "$SYSTEM_FONT_DIR/$target.new" || fail "emoji_copy_failed"
+  chmod 0644 "$SYSTEM_FONT_DIR/$target.new"
+  if ! clear_emoji_overlays; then
+    rm -f "$SYSTEM_FONT_DIR/$target.new"
+    fail "emoji_clear_failed"
+  fi
+  mv -f "$SYSTEM_FONT_DIR/$target.new" "$SYSTEM_FONT_DIR/$target" || fail "emoji_save_failed"
+  printf '%s\n' "$target" > "$EMOJI_TARGETS_FILE" || fail "emoji_state_failed"
+  printf '%s\n' "$mode" > "$EMOJI_MODE_FILE" || fail "emoji_state_failed"
+  chmod 0644 "$EMOJI_TARGETS_FILE" "$EMOJI_MODE_FILE"
+  touch "$DATA_DIR/pending_reboot"
+  sync
+  echo "ok=emoji"
 }
 
 print_status() {
@@ -62,12 +216,40 @@ print_status() {
     echo "${role}_variable=$variable"
   done
 
+  emoji_mode="$(read_emoji_mode)"
+  emoji_target="$(cat "$EMOJI_TARGETS_FILE" 2>/dev/null)"
+  custom_size=0
+  [ -f "$EMOJI_CUSTOM_FILE" ] && custom_size="$(stat -c %s "$EMOJI_CUSTOM_FILE" 2>/dev/null)"
+  echo "emoji_mode=$emoji_mode"
+  echo "emoji_target=$emoji_target"
+  echo "emoji_custom_size=$custom_size"
+  echo "emoji_name_b64=$(cat "$DATA_DIR/emoji.name.b64" 2>/dev/null)"
+  [ -f "$EMOJI_DIR/ios/AppleColorEmoji.ttf" ] && echo "emoji_builtin_ios=1" || echo "emoji_builtin_ios=0"
+  [ -f "$EMOJI_DIR/google/NotoColorEmoji.ttf" ] && echo "emoji_builtin_google=1" || echo "emoji_builtin_google=0"
+  [ -f "$EMOJI_DIR/blobmoji/Blobmoji.ttf" ] && echo "emoji_builtin_blobmoji=1" || echo "emoji_builtin_blobmoji=0"
+  [ -f "$EMOJI_DIR/facebook/Facebook-Emoji.ttf" ] && echo "emoji_builtin_facebook=1" || echo "emoji_builtin_facebook=0"
+  echo "western_targets=$(cat "$DATA_DIR/western.targets" 2>/dev/null)"
+  echo "chinese_targets=$(cat "$DATA_DIR/chinese.targets" 2>/dev/null)"
+
   [ -f "$DATA_DIR/pending_reboot" ] && echo "pending_reboot=1" || echo "pending_reboot=0"
 
   conflicts=""
-  for id in PixelFonts PingRSCCaesiumVFOPlusOni tptq_and_googlesans; do
-    path="/data/adb/modules/$id"
-    if [ -d "$path" ] && [ ! -f "$path/disable" ] && [ ! -f "$path/remove" ]; then
+  for path in /data/adb/modules/*; do
+    [ -d "$path" ] || continue
+    id=${path##*/}
+    [ "$id" = "${MODDIR##*/}" ] && continue
+    [ -f "$path/disable" ] && continue
+    [ -f "$path/remove" ] && continue
+    has_font_overlay=0
+    [ -f "$path/system/etc/fonts.xml" ] && has_font_overlay=1
+    [ -f "$path/system/system_ext/etc/fonts_base.xml" ] && has_font_overlay=1
+    [ -f "$path/system/product/etc/fonts_customization.xml" ] && has_font_overlay=1
+    if [ "$has_font_overlay" = "0" ]; then
+      for font in "$path"/system/fonts/*.ttf "$path"/system/fonts/*.otf "$path"/system/fonts/*.ttc; do
+        [ -f "$font" ] && has_font_overlay=1 && break
+      done
+    fi
+    if [ "$has_font_overlay" = "1" ]; then
       [ -n "$conflicts" ] && conflicts="$conflicts,$id" || conflicts="$id"
     fi
   done
@@ -90,7 +272,8 @@ begin_upload() {
 }
 
 commit_upload() {
-  role_paths "$1"
+  role="$1"
+  role_paths "$role"
   expected="$2"
   variable="$3"
   name_b64="$4"
@@ -108,9 +291,15 @@ commit_upload() {
   mv -f "$TEMP_FILE" "$TARGET_FILE" || fail "save_failed"
   chmod 0644 "$TARGET_FILE"
   printf '%s\n' "$name_b64" > "$NAME_FILE"
-  printf '%s\n' "$variable" > "$VARIABLE_FILE"
-  chmod 0644 "$NAME_FILE" "$VARIABLE_FILE"
+  chmod 0644 "$NAME_FILE"
 
+  if [ "$role" = "emoji" ]; then
+    apply_emoji custom
+    return
+  fi
+
+  printf '%s\n' "$variable" > "$VARIABLE_FILE"
+  chmod 0644 "$VARIABLE_FILE"
   apply_config
   touch "$DATA_DIR/pending_reboot"
   sync
@@ -128,5 +317,11 @@ case "$1" in
   begin) begin_upload "$2" "$3" ;;
   commit) commit_upload "$2" "$3" "$4" "$5" ;;
   abort) abort_upload "$2" ;;
+  emoji-set) apply_emoji "$2" ;;
+  emoji-detect)
+    target="$(detect_emoji_target)"
+    [ -n "$target" ] || fail "emoji_target_not_found"
+    echo "emoji_target=$target"
+    ;;
   *) fail "invalid_command" ;;
 esac

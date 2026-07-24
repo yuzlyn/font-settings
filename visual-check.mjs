@@ -4,6 +4,8 @@ import { chromium } from "./.fontsetting-build/node_modules/playwright-core/inde
 
 const edge = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 const pageUrl = pathToFileURL(path.resolve("FontSetting_ColorOS16/webroot/index.html")).href;
+const aboutUrl = pathToFileURL(path.resolve("FontSetting_ColorOS16/webroot/about.html")).href;
+const donateUrl = pathToFileURL(path.resolve("FontSetting_ColorOS16/webroot/donate.html")).href;
 const browser = await chromium.launch({ executablePath: edge, headless: true });
 
 const viewports = [
@@ -11,12 +13,53 @@ const viewports = [
   { name: "mobile", width: 390, height: 844 },
 ];
 
+async function verifyLongPressCopy(page, selector, expectedValue) {
+  const before = page.url();
+  await page.dispatchEvent(selector, "pointerdown", {
+    pointerType: "touch",
+    isPrimary: true,
+    button: 0,
+    clientX: 24,
+    clientY: 24,
+  });
+  await page.waitForTimeout(650);
+  await page.dispatchEvent(selector, "pointerup", {
+    pointerType: "touch",
+    isPrimary: true,
+    button: 0,
+    clientX: 24,
+    clientY: 24,
+  });
+  await page.dispatchEvent(selector, "click", { button: 0 });
+  await page.waitForTimeout(100);
+  const result = await page.evaluate(() => ({
+    copied: window.__copiedText,
+    snackbar: document.querySelector("#snackbar").textContent,
+    url: location.href,
+  }));
+  if (result.copied !== expectedValue || !result.snackbar || result.url !== before) {
+    throw new Error(`${selector} long-press copy mismatch: ${JSON.stringify(result)}`);
+  }
+  await page.evaluate(() => {
+    document.querySelector("#snackbar").open = false;
+    window.__copiedText = "";
+  });
+}
+
 for (const viewport of viewports) {
   for (const colorScheme of ["light", "dark"]) {
   const page = await browser.newPage({ viewport, colorScheme });
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        async writeText(value) {
+          window.__copiedText = value;
+        },
+      },
+    });
     window.ksu = {
       exec(command, options, callbackName) {
         let output = "ok";
@@ -35,6 +78,16 @@ for (const viewport of viewports) {
           "western_size=188148",
           "western_name_b64=Q2Flc2l1bVZGLVVwcmlnaHQudHRm",
           "western_variable=1",
+          "emoji_mode=google",
+          "emoji_target=NotoColorEmoji.ttf",
+          "emoji_custom_size=3145728",
+          "emoji_name_b64=TXlFbW9qaS5vdGY=",
+          "emoji_builtin_ios=1",
+          "emoji_builtin_google=1",
+          "emoji_builtin_blobmoji=1",
+          "emoji_builtin_facebook=1",
+          "western_targets=58",
+          "chinese_targets=56",
           "pending_reboot=1",
           "conflicts=PixelFonts,PingRSCCaesiumVFOPlusOni",
         ].join("\n");
@@ -78,6 +131,15 @@ for (const viewport of viewports) {
     const avatarStyle = getComputedStyle(avatar);
     const sourceLink = document.querySelector(".source-link");
     const sourceCard = style(".source-card");
+    const resourceGrid = document.querySelector(".resource-grid");
+    const resourceCards = [...resourceGrid.querySelectorAll(".resource-card")];
+    const donateLink = document.querySelector("#donate-card");
+    const donateCard = style(".donate-card");
+    const emojiCard = style(".emoji-card");
+    const selectedEmoji = document.querySelector("#emoji-picker-trigger");
+    const selectedEmojiStyle = getComputedStyle(selectedEmoji);
+    const emojiHeadingIconRect = document.querySelector(".emoji-leading").getBoundingClientRect();
+    const emojiHeadingCopyRect = document.querySelector(".emoji-heading-row .item-copy").getBoundingClientRect();
     const westernIcon = document.querySelector(".font-card:nth-of-type(2) .leading-icon");
     return {
       viewport: innerWidth,
@@ -112,7 +174,7 @@ for (const viewport of viewports) {
       hasLargeTitle: Boolean(document.querySelector(".large-title #page-title")),
       hasBackIcon: Boolean(document.querySelector("#back-button svg")),
       hasRefreshIcon: Boolean(document.querySelector("#refresh-button svg")),
-      hasLinearProgress: document.querySelectorAll("mdui-linear-progress").length === 3,
+      hasLinearProgress: document.querySelectorAll("mdui-linear-progress").length === 4,
       footerCentered: style("footer").justifyContent === "center",
       authorHref: authorLink.href,
       authorUsesPrimary: tokenMatches(authorStyle.backgroundColor, "primary") &&
@@ -123,11 +185,30 @@ for (const viewport of viewports) {
       avatarSize: [parseFloat(avatarStyle.width), parseFloat(avatarStyle.height)],
       avatarRound: parseFloat(avatarStyle.borderTopLeftRadius) >= 22,
       sourceHref: sourceLink.href,
-      sourceBeforeFooter: sourceLink.nextElementSibling.tagName.toLowerCase() === "footer",
+      sourceBeforeResources: sourceLink.nextElementSibling === resourceGrid,
+      resourcesBeforeDonate: resourceGrid.nextElementSibling === donateLink,
+      donateBeforeFooter: donateLink.nextElementSibling.tagName.toLowerCase() === "footer",
+      donateHref: donateLink.href,
+      donateCardUsesLow: tokenMatches(donateCard.backgroundColor, "surface-container-low"),
       sourceCardUsesLow: tokenMatches(sourceCard.backgroundColor, "surface-container-low"),
       sourceCardRadius: parseFloat(sourceCard.borderTopLeftRadius),
       sourceCardBorder: parseFloat(sourceCard.borderTopWidth),
       sourceCardShadow: sourceCard.boxShadow,
+      resourceCount: resourceCards.length,
+      resourceCardsUseLow: resourceCards.every((element) => tokenMatches(getComputedStyle(element).backgroundColor, "surface-container-low")),
+      resourceColumns: getComputedStyle(resourceGrid).gridTemplateColumns.split(" ").length,
+      telegramHref: document.querySelector("#telegram-card").href,
+      telegramCopy: document.querySelector("#telegram-card").dataset.copyValue,
+      qqHref: document.querySelector("#qq-card").href,
+      qqCopy: document.querySelector("#qq-card").dataset.copyValue,
+      aboutHref: document.querySelector("#about-card").href,
+      emojiCardUsesLow: tokenMatches(emojiCard.backgroundColor, "surface-container-low"),
+      emojiSelected: document.querySelector("#selected-emoji-name").textContent === "Google / Pixel" &&
+        document.querySelector("#selected-emoji-detail").textContent === "NotoColorEmoji.ttf",
+      emojiTriggerUsesSecondaryContainer: tokenMatches(selectedEmojiStyle.backgroundColor, "secondary-container"),
+      emojiHeadingSeparated: emojiHeadingIconRect.right <= emojiHeadingCopyRect.left,
+      emojiTarget: document.querySelector("#emoji-status").textContent,
+      emojiCustomName: document.querySelector("#emoji-custom-name").textContent,
       westernIconText: westernIcon.textContent.trim(),
       westernIconHasSvg: Boolean(westernIcon.querySelector("svg")),
     };
@@ -143,6 +224,41 @@ for (const viewport of viewports) {
       value: progress.getAttribute("aria-valuenow"),
     };
   });
+
+  await page.click("#emoji-picker-trigger");
+  await page.waitForTimeout(500);
+  const emojiDialogCheck = await page.evaluate(() => {
+    const dialog = document.querySelector("#emoji-dialog");
+    const list = document.querySelector("#emoji-options");
+    const selected = list.querySelector('.emoji-picker-option[data-mode="google"]');
+    const rect = list.getBoundingClientRect();
+    const dialogRect = dialog.getBoundingClientRect();
+    const radio = selected.querySelector(".radio-indicator");
+    const radioRect = radio.getBoundingClientRect();
+    const radioStyle = getComputedStyle(radio);
+    return {
+      open: dialog.open,
+      optionCount: list.querySelectorAll(".emoji-picker-option").length,
+      selected: selected.classList.contains("selected") && selected.querySelector("input").checked,
+      hasSamsung: Boolean(list.querySelector('[data-mode="samsung"]')),
+      withinViewport: rect.left >= 0 && rect.right <= innerWidth && rect.top >= 0 && rect.bottom <= innerHeight,
+      rect: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom },
+      dialogRect: { left: dialogRect.left, top: dialogRect.top, right: dialogRect.right, bottom: dialogRect.bottom },
+      radio: { left: radioRect.left, right: radioRect.right, width: radioRect.width, display: radioStyle.display, opacity: radioStyle.opacity },
+      viewport: { width: innerWidth, height: innerHeight },
+    };
+  });
+  if (viewport.name === "mobile" && colorScheme === "light") {
+    await page.screenshot({ path: "fontsetting-mobile-emoji-dialog.png" });
+  }
+  await page.click("#close-emoji-dialog");
+  await page.waitForTimeout(500);
+  if (viewport.name === "mobile" && colorScheme === "light") {
+    await verifyLongPressCopy(page, "#telegram-card", "t.me/fontsettings");
+    await verifyLongPressCopy(page, "#qq-card", "1082347624");
+  }
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(500);
 
   const disabledCheck = await page.evaluate(async () => {
     const button = document.querySelector("#reboot-button");
@@ -221,8 +337,18 @@ for (const viewport of viewports) {
   if (layout.sourceHref !== "https://github.com/yuzlyn/font-setting-for-coloros16" && layout.sourceHref !== "https://github.com/yuzlyn/font-setting-for-coloros16/") {
     throw new Error(`${testName} source URL mismatch: ${JSON.stringify(layout)}`);
   }
-  if (!layout.sourceBeforeFooter || !layout.sourceCardUsesLow || layout.sourceCardRadius !== 35 || layout.sourceCardBorder !== 0 || layout.sourceCardShadow !== "none") {
+  if (!layout.sourceBeforeResources || !layout.resourcesBeforeDonate || !layout.donateBeforeFooter || !layout.donateHref.endsWith("/donate.html") || !layout.donateCardUsesLow || !layout.sourceCardUsesLow || layout.sourceCardRadius !== 35 || layout.sourceCardBorder !== 0 || layout.sourceCardShadow !== "none") {
     throw new Error(`${testName} source card mismatch: ${JSON.stringify(layout)}`);
+  }
+  const expectedResourceColumns = viewport.name === "mobile" ? 1 : 3;
+  if (layout.resourceCount !== 3 || !layout.resourceCardsUseLow || layout.resourceColumns !== expectedResourceColumns || layout.telegramHref !== "https://t.me/fontsettings" || layout.telegramCopy !== "t.me/fontsettings" || !layout.qqHref.startsWith("mqqapi://card/show_pslcard?") || layout.qqCopy !== "1082347624" || !layout.aboutHref.endsWith("/about.html")) {
+    throw new Error(`${testName} community cards mismatch: ${JSON.stringify(layout)}`);
+  }
+  if (!layout.emojiCardUsesLow || !layout.emojiSelected || !layout.emojiTriggerUsesSecondaryContainer || !layout.emojiHeadingSeparated || !layout.emojiTarget.includes("NotoColorEmoji.ttf") || !layout.emojiCustomName.includes("MyEmoji.otf")) {
+    throw new Error(`${testName} Emoji panel mismatch: ${JSON.stringify(layout)}`);
+  }
+  if (!emojiDialogCheck.open || emojiDialogCheck.optionCount !== 6 || !emojiDialogCheck.selected || emojiDialogCheck.hasSamsung || !emojiDialogCheck.withinViewport || emojiDialogCheck.radio.width < 20 || emojiDialogCheck.radio.right > emojiDialogCheck.dialogRect.right) {
+    throw new Error(`${testName} Emoji dialog mismatch: ${JSON.stringify(emojiDialogCheck)}`);
   }
   if (layout.westernIconText !== "Aa" || layout.westernIconHasSvg || layout.westernIconText.includes("文")) {
     throw new Error(`${testName} western icon mismatch: ${JSON.stringify(layout)}`);
@@ -233,6 +359,281 @@ for (const viewport of viewports) {
   }
   console.log(`${testName}: ${layout.viewport}px, MD3 tokens and layout verified`);
   await page.close();
+  }
+}
+
+const localeCases = [
+  {
+    browserLocale: "zh-CN",
+    expectedLang: "zh-CN",
+    expected: ["字体设置", "中文字体", "西文字体", "Emoji 设置", "系统状态", "源码仓库", "Telegram 群组", "QQ群", "关于", "重启手机", "KernelSU 已连接"],
+  },
+  {
+    browserLocale: "zh-TW",
+    expectedLang: "zh-TW",
+    expected: ["字型設定", "中文字型", "西文字型", "Emoji 設定", "系統狀態", "原始碼儲存庫", "Telegram 群組", "QQ 群組", "關於", "重新啟動手機", "KernelSU 已連線"],
+  },
+  {
+    browserLocale: "zh-Hant-TW",
+    expectedLang: "zh-TW",
+    expected: ["字型設定", "中文字型", "西文字型", "Emoji 設定", "系統狀態", "原始碼儲存庫", "Telegram 群組", "QQ 群組", "關於", "重新啟動手機", "KernelSU 已連線"],
+  },
+  {
+    browserLocale: "zh-HK",
+    expectedLang: "zh-CN",
+    expected: ["字体设置", "中文字体", "西文字体", "Emoji 设置", "系统状态", "源码仓库", "Telegram 群组", "QQ群", "关于", "重启手机", "KernelSU 已连接"],
+  },
+  {
+    browserLocale: "fr-FR",
+    expectedLang: "en-US",
+    expected: ["Font settings", "Chinese font", "Latin font", "Emoji settings", "System status", "Source repository", "Telegram group", "QQ group", "About", "Restart device", "KernelSU connected"],
+  },
+];
+
+for (const localeCase of localeCases) {
+  const page = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+    colorScheme: "light",
+    locale: localeCase.browserLocale,
+  });
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.addInitScript(() => {
+    window.ksu = {
+      exec(command, options, callbackName) {
+        let output = "ok";
+        if (command.includes("modules_update")) output = "/data/adb/modules/font_setting_coloros16";
+        if (command.includes("theme_customization_overlay_packages")) output = "{}";
+        if (command.endsWith(" status")) output = [
+          "module=ok",
+          "chinese_size=54604100",
+          "chinese_name_b64=UGluZ1JvdW5kU0NWRi50dGY=",
+          "chinese_variable=1",
+          "western_size=188148",
+          "western_name_b64=Q2Flc2l1bVZGLVVwcmlnaHQudHRm",
+          "western_variable=1",
+          "emoji_mode=google",
+          "emoji_target=NotoColorEmoji.ttf",
+          "emoji_custom_size=0",
+          "emoji_builtin_ios=1",
+          "emoji_builtin_google=1",
+          "emoji_builtin_blobmoji=1",
+          "emoji_builtin_facebook=1",
+          "western_targets=58",
+          "chinese_targets=56",
+          "pending_reboot=1",
+          "conflicts=",
+        ].join("\n");
+        setTimeout(() => window[callbackName](0, output, ""), 0);
+      },
+    };
+  });
+  await page.goto(pageUrl);
+  await page.waitForTimeout(500);
+
+  const localized = await page.evaluate(() => ({
+    lang: document.documentElement.lang,
+    title: document.title,
+    text: document.body.innerText,
+    pageTitle: document.querySelector("#page-title").textContent,
+    backLabel: document.querySelector("#back-button").getAttribute("aria-label"),
+    backTitle: document.querySelector("#back-button").getAttribute("title"),
+    avatarAlt: document.querySelector(".github-avatar").getAttribute("alt"),
+    rebootHeadline: document.querySelector("#reboot-dialog").getAttribute("headline"),
+    emojiHeadline: document.querySelector("#emoji-dialog").getAttribute("headline"),
+    scrollWidth: document.documentElement.scrollWidth,
+    viewport: innerWidth,
+  }));
+
+  if (errors.length) throw new Error(`${localeCase.browserLocale} page errors: ${errors.join("; ")}`);
+  if (localized.lang !== localeCase.expectedLang || localized.title !== localeCase.expected[0] || localized.pageTitle !== localeCase.expected[0]) {
+    throw new Error(`${localeCase.browserLocale} locale resolution mismatch: ${JSON.stringify(localized)}`);
+  }
+  for (const label of localeCase.expected) {
+    if (!localized.text.includes(label)) {
+      throw new Error(`${localeCase.browserLocale} missing translation ${label}: ${JSON.stringify(localized)}`);
+    }
+  }
+  if (!localized.backLabel || localized.backLabel !== localized.backTitle || !localized.avatarAlt || !localized.rebootHeadline || !localized.emojiHeadline) {
+    throw new Error(`${localeCase.browserLocale} localized attributes mismatch: ${JSON.stringify(localized)}`);
+  }
+  if (localized.scrollWidth > localized.viewport) {
+    throw new Error(`${localeCase.browserLocale} mobile horizontal overflow: ${JSON.stringify(localized)}`);
+  }
+  if (localeCase.expectedLang === "zh-TW" && /字体|文件|连接|重启|源码仓库/.test(localized.text)) {
+    throw new Error(`zh-TW contains non-Taiwan terminology: ${JSON.stringify(localized)}`);
+  }
+
+  console.log(`${localeCase.browserLocale} -> ${localized.lang}: localized UI verified`);
+  await page.close();
+}
+
+const aboutLocaleCases = [
+  {
+    browserLocale: "zh-CN",
+    expectedLang: "zh-CN",
+    expected: ["兼容范围", "功能", "工作方式", "内置 Emoji", "故障恢复", "相关链接", "QQ群 1082347624"],
+  },
+  {
+    browserLocale: "zh-Hant-TW",
+    expectedLang: "zh-TW",
+    expected: ["相容範圍", "功能", "運作方式", "內建 Emoji", "故障排除", "相關連結", "QQ 群組 1082347624"],
+  },
+  {
+    browserLocale: "fr-FR",
+    expectedLang: "en-US",
+    expected: ["Compatibility", "Features", "How it works", "Built-in Emoji", "Recovery", "Links", "QQ group 1082347624"],
+  },
+];
+
+for (const viewport of viewports) {
+  for (const localeCase of aboutLocaleCases) {
+    const page = await browser.newPage({ viewport, colorScheme: "light", locale: localeCase.browserLocale });
+    const errors = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.addInitScript(() => {
+      window.ksu = {
+        exec(command, options, callbackName) {
+          const output = command.includes("theme_customization_overlay_packages")
+            ? JSON.stringify({ "android.theme.customization.system_palette": "FF1875F5" })
+            : "";
+          setTimeout(() => window[callbackName](0, output, ""), 0);
+        },
+      };
+    });
+    await page.goto(aboutUrl);
+    await page.waitForTimeout(500);
+
+    const about = await page.evaluate(() => {
+      const visible = [...document.querySelectorAll("body *")].filter((element) => {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+      });
+      return {
+        lang: document.documentElement.lang,
+        title: document.title,
+        text: document.body.innerText,
+        h1: document.querySelector("h1").textContent,
+        sectionCount: document.querySelectorAll(".readme-section").length,
+        topBarVariant: document.querySelector("mdui-top-app-bar").variant,
+        backLabel: document.querySelector("#about-back").getAttribute("aria-label"),
+        backTitle: document.querySelector("#about-back").getAttribute("title"),
+        avatarLoaded: document.querySelector(".about-author img").complete && document.querySelector(".about-author img").naturalWidth > 0,
+        sourceHref: document.querySelector('.readme-links a[href*="github.com"]').href,
+        telegramHref: document.querySelector('.readme-links a[href*="t.me"]').href,
+        qqHref: document.querySelector('.readme-links a[href^="mqqapi:"]').href,
+        scrollWidth: document.documentElement.scrollWidth,
+        viewport: innerWidth,
+        overflow: visible
+          .map((element) => ({ tag: element.tagName.toLowerCase(), rect: element.getBoundingClientRect() }))
+          .filter(({ rect }) => rect.left < -0.5 || rect.right > innerWidth + 0.5)
+          .map(({ tag, rect }) => ({ tag, left: rect.left, right: rect.right })),
+      };
+    });
+
+    const testName = `about-${viewport.name}-${localeCase.browserLocale}`;
+    if (errors.length) throw new Error(`${testName} page errors: ${errors.join("; ")}`);
+    if (about.lang !== localeCase.expectedLang || about.title !== "README" || about.h1 !== "Universal Font Settings" || about.sectionCount !== 6 || about.topBarVariant !== "small") {
+      throw new Error(`${testName} structure mismatch: ${JSON.stringify(about)}`);
+    }
+    for (const label of localeCase.expected) {
+      if (!about.text.includes(label)) throw new Error(`${testName} missing ${label}: ${JSON.stringify(about)}`);
+    }
+    if (!about.backLabel || about.backLabel !== about.backTitle || !about.avatarLoaded || about.sourceHref !== "https://github.com/yuzlyn/font-setting-for-coloros16" || about.telegramHref !== "https://t.me/fontsettings" || !about.qqHref.startsWith("mqqapi://card/show_pslcard?")) {
+      throw new Error(`${testName} links or accessibility mismatch: ${JSON.stringify(about)}`);
+    }
+    if (about.scrollWidth > about.viewport || about.overflow.length) {
+      throw new Error(`${testName} horizontal overflow: ${JSON.stringify(about)}`);
+    }
+    if (localeCase.expectedLang === "zh-TW" && /字体|文件|连接|重启|源码仓库/.test(about.text)) {
+      throw new Error(`${testName} contains non-Taiwan terminology: ${JSON.stringify(about)}`);
+    }
+    if (viewport.name === "mobile" && localeCase.browserLocale === "zh-Hant-TW") {
+      await page.screenshot({ path: "fontsetting-mobile-about.png", fullPage: true });
+    }
+    console.log(`${testName}: README page verified`);
+    await page.close();
+  }
+}
+
+const donateLocaleCases = [
+  { browserLocale: "zh-CN", expectedLang: "zh-CN", title: "捐赠作者", alipay: "支付宝", wechat: "微信支付" },
+  { browserLocale: "zh-Hant-TW", expectedLang: "zh-TW", title: "贊助作者", alipay: "支付寶", wechat: "微信支付" },
+  { browserLocale: "fr-FR", expectedLang: "en-US", title: "Support the author", alipay: "Alipay", wechat: "WeChat Pay" },
+];
+
+for (const viewport of viewports) {
+  for (const localeCase of donateLocaleCases) {
+    const page = await browser.newPage({ viewport, colorScheme: "light", locale: localeCase.browserLocale });
+    const errors = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.goto(donateUrl);
+    await page.waitForTimeout(500);
+
+    const donate = await page.evaluate(() => {
+      const figures = [...document.querySelectorAll(".payment-figure")].map((figure) => {
+        const image = figure.querySelector("img");
+        const rect = image.getBoundingClientRect();
+        return {
+          label: figure.querySelector("figcaption").textContent,
+          alt: image.alt,
+          loaded: image.complete && image.naturalWidth > 0 && image.naturalHeight > 0,
+          naturalWidth: image.naturalWidth,
+          naturalHeight: image.naturalHeight,
+          width: rect.width,
+          height: rect.height,
+          objectFit: getComputedStyle(image).objectFit,
+          bottom: rect.bottom,
+        };
+      });
+      const divider = document.querySelector(".payment-divider").getBoundingClientRect();
+      const token = document.querySelector(".token-support").getBoundingClientRect();
+      return {
+        lang: document.documentElement.lang,
+        title: document.title,
+        h1: document.querySelector("h1").textContent,
+        paymentLabel: document.querySelector(".payment-list").getAttribute("aria-label"),
+        backLabel: document.querySelector("#about-back").getAttribute("aria-label"),
+        backTitle: document.querySelector("#about-back").getAttribute("title"),
+        figures,
+        divider: { width: divider.width, height: divider.height },
+        tokenText: document.querySelector(".token-support").textContent,
+        tokenTop: token.top,
+        scrollWidth: document.documentElement.scrollWidth,
+        viewport: innerWidth,
+      };
+    });
+
+    const testName = `donate-${viewport.name}-${localeCase.browserLocale}`;
+    if (errors.length) throw new Error(`${testName} page errors: ${errors.join("; ")}`);
+    if (donate.lang !== localeCase.expectedLang || donate.title !== localeCase.title || donate.h1 !== localeCase.title) {
+      throw new Error(`${testName} locale mismatch: ${JSON.stringify(donate)}`);
+    }
+    if (!donate.paymentLabel || !donate.backLabel || donate.backLabel !== donate.backTitle || donate.figures.length !== 2) {
+      throw new Error(`${testName} structure or accessibility mismatch: ${JSON.stringify(donate)}`);
+    }
+    if (donate.figures[0].label !== localeCase.alipay || donate.figures[1].label !== localeCase.wechat || donate.figures.some((figure) => !figure.alt)) {
+      throw new Error(`${testName} payment labels mismatch: ${JSON.stringify(donate)}`);
+    }
+    for (const figure of donate.figures) {
+      const renderedRatio = figure.width / figure.height;
+      const naturalRatio = figure.naturalWidth / figure.naturalHeight;
+      if (!figure.loaded || figure.objectFit !== "contain" || Math.abs(renderedRatio - naturalRatio) > 0.01 || figure.width > 420.5 || figure.width > donate.viewport * 0.83) {
+        throw new Error(`${testName} payment image mismatch: ${JSON.stringify(donate)}`);
+      }
+    }
+    if (donate.divider.height !== 1 || donate.divider.width <= donate.figures[0].width || donate.tokenText !== "token支援" || donate.tokenTop <= donate.figures[1].bottom) {
+      throw new Error(`${testName} divider or token placement mismatch: ${JSON.stringify(donate)}`);
+    }
+    if (donate.scrollWidth > donate.viewport) {
+      throw new Error(`${testName} horizontal overflow: ${JSON.stringify(donate)}`);
+    }
+    if (viewport.name === "mobile" && localeCase.browserLocale === "zh-Hant-TW") {
+      await page.screenshot({ path: "fontsetting-mobile-donate.png", fullPage: true });
+    }
+    console.log(`${testName}: donation page verified`);
+    await page.close();
   }
 }
 

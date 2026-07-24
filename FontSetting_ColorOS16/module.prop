@@ -1,6 +1,6 @@
 id=font_setting_coloros16
-name=font setting for coloros16
-version=v1.2.1
-versionCode=121
+name=Universal Font Settings
+version=v2.2.0
+versionCode=220
 author=yuzlyn
-description=通过 KernelSU WebUI 上传中文与西文 TTF，并应用到 ColorOS 16。
+description=适用于 Android 8.0+ 的通用 KernelSU 字体与 Emoji 管理模块，安装时自动适配系统字体配置。

@@ -1,0 +1,69 @@
+.donate-page {
+  max-width: 600px;
+}
+
+.donate-header {
+  padding: 28px 4px 24px;
+}
+
+.donate-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 36px;
+  letter-spacing: 0;
+}
+
+.payment-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.payment-figure {
+  width: min(82vw, 420px);
+  max-width: 100%;
+  margin: 0;
+}
+
+.payment-figure figcaption {
+  margin: 0 0 12px;
+  color: rgb(var(--mdui-color-on-surface));
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 24px;
+  text-align: center;
+  letter-spacing: 0;
+}
+
+.payment-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.payment-divider {
+  width: min(100%, 480px);
+  height: 1px;
+  margin: 28px 0;
+  border: 0;
+  background: rgb(var(--mdui-color-outline-variant));
+}
+
+.token-support {
+  margin: 24px 0 0;
+  color: rgb(var(--mdui-color-primary));
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+  text-align: center;
+  letter-spacing: 0;
+}
+
+@media (max-width: 620px) {
+  .donate-header {
+    padding: 24px 4px 20px;
+  }
+}

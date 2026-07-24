@@ -1,16 +1,27 @@
-# font setting for coloros16
+# Universal Font Settings
 
 - 作者：**yuzlyn**
-- 版本：**v1.2.1**
+- 版本：**v2.2.0**
 - 模块 ID：`font_setting_coloros16`
 
-这是一个面向 ColorOS 16 的 KernelSU 字体模块。模块提供离线 WebUI，可分别上传中文和西文 `.ttf` 文件，并通过 KernelSU 的 systemless mount 替换字体映射，不直接修改系统分区。
+这是一个适用于 Android 8.0+ 的通用 KernelSU 字体模块，不限定手机品牌或 ROM。模块提供离线 WebUI，可分别上传中文和西文 `.ttf` 文件，并可选择内置 iOS、Google、Blobmoji、Facebook Emoji 或上传自定义 `.ttf/.otf`。所有替换均通过 KernelSU systemless mount 生效，不直接修改系统分区。
 
 ## 下载
 
-- 安装包：[font_setting_for_coloros16_v1.2.1_KSU.zip](./font_setting_for_coloros16_v1.2.1_KSU.zip)
-- 文件大小：`32,807,752` 字节（约 31.3 MiB）
-- SHA-256：`C6D99069A12D763A6B065B4C177E97F13CC4CFFA55E68FF4284A8224F13FA30C`
+- 安装包：[universal_font_settings_v2.2.0_KSU.zip](./universal_font_settings_v2.2.0_KSU.zip)
+- 文件大小：`178,694,878` 字节；SHA-256：`B5BAB30A988C83FD040B824680D278D95945AE7732C72782DBEEDBE4D292BF9F`。
+
+v2.2.0 在最底部新增“捐赠作者”卡片。点击后进入独立的 MD3 赞助页面，依次显示离线支付宝与微信支付二维码，两种支付方式之间使用分隔线，并在支付区下方显示“token支援”。
+
+v2.1.0 在 WebUI 底部新增 Telegram 群组、QQ 群和关于卡片。Telegram 与 QQ 卡片支持长按复制群组信息；关于卡片打开模块内置、支持三语言与 Monet 主题的 README 页面。
+
+v2.0.0 将模块改为通用动态适配架构。安装时读取设备实际存在的 `/system`、`/system_ext`、`/product` 和 `/vendor` 字体 XML，只改写默认西文字族与中文语言 fallback，并为静态或可变字体重新生成正确的节点。安装程序会验证中西文字族均已识别；不支持的私有配置会中止安装，不会套用其他 ROM 的 XML。
+
+v1.5.0 新增 WebUI 多语言支持。系统语言为 `zh-TW` 时显示符合台湾惯用语的繁体中文；`zh-CN`、`zh-HK` 及其他中文区域显示简体中文；所有非中文系统语言统一回退到 `en-US`。页面标题、操作按钮、状态提示、错误消息、对话框和无障碍标签会一并切换。
+
+v1.4.0 将 Emoji 平铺选项改为符合 MD3 Expressive 的当前值选择行与模态单选列表，并内置 iOS / Apple、Google / Pixel、经典果冻人和 Facebook 四款字体。
+
+v1.3.0 新增 Emoji 设置卡片、自定义 `.ttf/.otf` 上传，以及基于系统字体 XML 和 `/system/fonts` 实际文件的动态目标检测。选择状态、自定义文件和目标记录会在模块更新时保留或重建。
 
 v1.2.1 将字体上传和配置读取的自定义波浪进度条替换为 MDUI 的标准 Material 线性进度条，上传时显示确定进度，读取配置时显示默认不确定进度动画。
 
@@ -20,24 +31,25 @@ v1.1.0 使用系统 Monet 种子生成完整 Material Design 3 色板，支持 T
 
 v1.0.1 修复 KernelSU 3.2.4 新版三参数异步 `ksu.exec` 接口兼容问题，同时保留旧版同步接口回退。v1.0.0 会因提前读取尚未返回的执行结果而显示“KernelSU 连接失败”。
 
-## 已验证环境
+## 兼容范围
 
-- 设备：OPPO PHY110
-- 系统：ColorOS `16.0.7.200(CN01)`
-- Android：16 / API 36
-- KernelSU：`ksud 3.2.4`
-- WebUI：MDUI `2.1.5` + Material Color Utilities `0.3.0`，全部资源已离线打包
+- Android：8.0 及以上（API 26+）
+- Root：KernelSU 或提供兼容 KernelSU WebUI bridge 与 systemless 模块挂载的实现
+- 字体配置：Android 标准 `familyset` / `fonts-modification` XML
+- 已实机验证：OPPO PHY110、ColorOS `16.0.7.200(CN01)`、Android 16 / API 36、KernelSU `3.2.4`
+- 已使用夹具验证：AOSP 默认 `sans-serif`、CJK TTC 索引、`system_ext` OEM 字族及 `product` locale customization
 
-模块安装脚本会检查 API 级别，非 Android 16（API 36）设备会中止安装。不同 ColorOS 16 版本的字体配置可能存在差异，刷入前应保留可用的 adb root 和 KernelSU 救援手段。
+部分厂商可能使用未公开的字体服务或非标准配置。这类设备若无法识别中西文字族，安装程序会明确中止。刷入前仍应保留可用的 adb root 和 KernelSU 救援手段。
 
 ## 安装
 
 1. 在 KernelSU 中停用其他字体替换模块，尤其是 `PixelFonts`、`TPTQ Ping Round SC + Caesium VF` 和 `tptq_and_googlesans`。
-2. 在 KernelSU 模块页面安装 `font_setting_for_coloros16_v1.2.1_KSU.zip`。
+2. 在 KernelSU 模块页面安装 `universal_font_settings_v2.2.0_KSU.zip`。
 3. 重启手机，使模块及内置默认字体首次生效。
 4. 回到 KernelSU 模块页面，打开本模块的 WebUI。
 5. 分别选择中文和西文 TTF，等待进度条完成。
-6. 点击“重启应用”，重启后使用新字体。
+6. 在“Emoji 设置”中保持系统默认、选择一个可用内置预设，或上传自定义 `.ttf/.otf`。
+7. 点击“重启手机”，重启后使用新字体与 Emoji。
 
 如果 KernelSU 在首次重启前允许打开 WebUI，页面会自动优先访问 `/data/adb/modules_update/font_setting_coloros16`；重启后会自动回退到活动模块目录。
 
@@ -49,6 +61,27 @@ v1.0.1 修复 KernelSU 3.2.4 新版三参数异步 `ksu.exec` 接口兼容问题
 - 西文字体应包含拉丁字母、数字和常用标点。
 - 页面会读取 `fvar` 表并识别 `wght` 可变轴。可变字体使用权重轴映射，静态字体使用 Android 合成权重。
 - 页面只验证字体容器和表目录，不保证字体本身无损或字形完整。
+
+## 内置 Emoji 文件
+
+发布包内置以下 Android 兼容的彩色 Emoji SFNT 字体：
+
+```text
+FontSetting_ColorOS16/emoji/
+├── ios/AppleColorEmoji.ttf
+├── google/NotoColorEmoji.ttf
+├── blobmoji/Blobmoji.ttf
+└── facebook/Facebook-Emoji.ttf
+```
+
+四个文件均已验证为 SFNT，并包含 Android 可用的 `CBDT/CBLC` 彩色字形表。UI 仍会检测文件是否存在，构建损坏时对应项目会显示缺失并禁用。Apple 字体资源及图稿仍归 Apple Inc. 所有，分发前应自行确认使用范围。
+
+字体来源：
+
+- iOS / Apple：`https://github.com/samuelngs/apple-emoji-ttf` 的 `AppleColorEmoji-Linux.ttf` Release 资产。
+- Google / Pixel：`https://raw.githubusercontent.com/googlefonts/noto-emoji/main/fonts/NotoColorEmoji.ttf`。
+- 经典果冻人：`https://github.com/C1710/blobmoji/releases/latest/download/Blobmoji.ttf`。
+- Facebook：`https://github.com/infofintech/typography/raw/main/Facebook-Emoji.ttf`。
 
 模块初始内置 `PingRoundSCVF.ttf` 作为中文字体、`CaesiumVF-Upright.ttf` 作为西文字体，因此安装后即使还未上传自定义文件，字体配置也不会引用缺失文件。
 
@@ -70,13 +103,17 @@ WebUI 通过 root bridge 读取 `theme_customization_overlay_packages` 中的 Mo
 
 ## 工作原理
 
-- 西文字体映射到默认 `sans-serif`、`sys-sans-en` 和 `op-sans-en`。
-- 中文字体映射到 ColorOS 的 `zh-Hans`、`zh-Hant` 和 `zh-Bopo` fallback。
-- 模块包含静态/可变字体的四种 XML 组合，上传后自动选择匹配配置。
+- 安装时备份设备原始字体 XML，并记录实际存在的配置路径；更新模块时保留该备份，避免备份到模块自己的 overlay。
+- 西文字体映射到系统默认 `sans-serif`、常见 OEM `sys-sans-en` / `op-sans-en`，以及旧 Android 的首个未命名字族。
+- 中文字体只映射 `zh` / `yue` 语言 family，包括 `zh-Hans`、`zh-Hant`、`zh-Bopo` 等，不改写日文、韩文、Emoji、数学符号或 serif family。
+- 生成器会移除原字体专属的 TTC `index`、PostScript 名称和轴声明；可变字体按原 XML 权重写入 `wght` 轴，静态字体交给 Android 合成权重。
 - 浏览器以 48 KiB 分块通过 KernelSU root bridge 写入临时文件。
-- 提交时校验最终文件大小，再替换模块中的固定字体文件并同步两份字体 XML。
+- 提交时校验最终文件大小，再替换模块中的固定字体文件，并从设备原始备份重新生成所有已识别的字体 XML。
+- Emoji 应用时依次读取 Android 字体 XML 中首个未标记 `ignore="true"` 的 `und-Zsye` family，并确认对应文件实际存在于 `/system/fonts`。XML 不可用时回退扫描 `NotoColorEmoji.ttf`、`SamsungColorEmoji.ttf`、`NotoColorEmojiLegacy.ttf` 及其他 Emoji `.ttf/.otf`。
+- 检测会跳过 `Flags` 和 `Compat` 字体，避免把主 Emoji 字体错误覆盖到独立旗帜或兼容补充字体。目标文件名保存在 `data/emoji.targets`，选择“保持默认”时只删除本模块记录的覆盖文件。
+- 选定字体会复制并重命名为 `system/fonts/<检测到的文件名>`，由 KernelSU OverlayFS/挂载机制在下次启动覆盖系统同名文件。
 - 模块更新时，`customize.sh` 会保留此前上传的字体和元数据。
-- 页面会提示已启用的已知字体替换模块，但不会自动停用或删除它们。
+- 页面会扫描已启用模块的字体 XML 和字体文件 overlay 并提示冲突，但不会自动停用或删除其他模块。
 
 ## 故障恢复
 
@@ -100,19 +137,33 @@ FontSetting_ColorOS16/
 ├── post-fs-data.sh
 ├── service.sh
 ├── action.sh
-├── config/                 # 四种静态/可变字体 XML
-├── data/                   # 文件名、字体类型和待重启状态
+├── config/original/        # 安装时生成的设备原始字体 XML 备份
+├── data/                   # 配置清单、映射数量、文件名、字体类型和待重启状态
+├── emoji/
+│   ├── ios/AppleColorEmoji.ttf
+│   ├── google/NotoColorEmoji.ttf
+│   ├── blobmoji/Blobmoji.ttf
+│   └── facebook/Facebook-Emoji.ttf
 ├── system/
-│   ├── etc/fonts.xml
 │   ├── fonts/
 │   │   ├── FontSettingChinese.ttf
 │   │   └── FontSettingWestern.ttf
-│   └── system_ext/etc/fonts_base.xml
-├── tools/fontctl.sh        # 状态、上传、提交和配置切换
+│   └── <动态生成的设备字体 XML>
+├── tools/
+│   ├── fontctl.sh          # 状态、上传、提交和 Emoji 切换
+│   ├── fontconfig.sh       # 捕获并生成设备字体配置
+│   └── fontxml.awk         # family 级 XML 转换器
 └── webroot/
     ├── index.html
     ├── app.js
+    ├── about.html          # 内置 README 关于页面
+    ├── about.js
+    ├── about.css
+    ├── donate.html         # 支付宝与微信支付捐赠页面
+    ├── donate.css
     ├── assets/
+    │   ├── alipay.jpg
+    │   ├── wechat.png
     │   └── yuzlyn-github.png
     ├── styles.css
     └── vendor/             # 离线 MDUI、MaterialKolor 色板及许可证
@@ -120,7 +171,7 @@ FontSetting_ColorOS16/
 
 ## 构建与验证
 
-安装构建依赖后生成字体配置和离线页面资源：
+安装构建依赖后生成内置字体和离线页面资源：
 
 ```powershell
 npm.cmd ci --prefix .fontsetting-build --cache .npm-cache
@@ -128,17 +179,23 @@ node build-font-setting.mjs
 node visual-check.mjs
 ```
 
+字体配置转换器夹具测试需要在 Android shell 中运行：
+
+```sh
+sh tests/fontconfig-test.sh
+```
+
 在 `FontSetting_ColorOS16` 目录中使用支持 ZIP 的 bsdtar 打包，可确保 ZIP 内路径使用 Android 兼容的 `/`：
 
 ```powershell
-tar -a -c -f ..\font_setting_for_coloros16_v1.2.1_KSU.zip *
+tar -a -c -f ..\universal_font_settings_v2.2.0_KSU.zip *
 ```
 
-本版本已完成以下检查：四份 XML 可解析；静态/可变轴数量符合配置；所有 shell 脚本通过设备 BusyBox `sh -n`；上传提交和 XML 切换在设备临时目录完成闭环；Monet 种子读取正确且页面不存在配色选择器；Monet AssistChip 不可交互；Surface Container 层级、状态色和控件色与动态 token 一致；卡片 35dp、无边框且无阴影；前导图标容器为 40dp；西文图标仅包含 `Aa`；作者头像成功离线加载且 GitHub 主页/源码仓库链接准确；Chip 和按钮为 Full Shape；顶栏固定为 48dp、标题上下间隙各 4dp，切换前后坐标及高度保持不变；Material 线性进度可正确映射 0-100% 数值；禁用按钮符合 12%/38% 透明度；390×844 与 1280×900 的亮色和暗色页面均无横向溢出；最终 ZIP 已通过 Android `unzip -t`。
+本版本已完成以下检查：AOSP/OEM/product 字体 XML 夹具通过静态与可变字体转换；真实设备配置动态生成后全部可解析；所有 shell 脚本通过设备 `sh -n`；WebUI 的 MD3 token、交互、三语言和 390×844 / 1280×900 亮暗色布局通过 Playwright 验证；最终 ZIP 通过完整性与内置 Emoji 文件检查。
 
 ## 许可与来源
 
 - WebUI 使用 MDUI 2.1.5，MIT License 已包含在 `webroot/vendor/MDUI-LICENSE.txt`。
 - 动态色板使用 Google Material Color Utilities 0.3.0，Apache License 2.0 已包含在 `webroot/vendor/MaterialColorUtilities-LICENSE.txt`。
-- ColorOS 16 字体映射参考已安装的 `PixelFonts for ColorOS16` 与 `TPTQ Ping Round SC + Caesium VF` 模块。
+- 动态生成器只使用安装设备自身的 Android 字体配置，不再内置或分发任何特定 ROM 的 XML。
 - 使用或分发自定义字体前，请自行确认对应字体授权。

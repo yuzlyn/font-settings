@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en-US" class="mdui-theme-auto">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
+    <title>Support the author</title>
+    <link rel="stylesheet" href="vendor/mdui.css">
+    <link rel="stylesheet" href="about.css?v=220-donate">
+    <link rel="stylesheet" href="donate.css?v=220-donate">
+    <script src="vendor/mdui.global.js"></script>
+    <script src="about.js?v=220-donate" defer></script>
+  </head>
+  <body data-page-title-key="donateTitle">
+    <mdui-top-app-bar variant="small">
+      <mdui-button-icon id="about-back" aria-label="Back" title="Back" data-i18n-aria-label="back" data-i18n-title="back">
+        <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2Z"></path></svg>
+      </mdui-button-icon>
+      <mdui-top-app-bar-title data-i18n="donateTitle">Support the author</mdui-top-app-bar-title>
+    </mdui-top-app-bar>
+
+    <main class="donate-page">
+      <header class="donate-header">
+        <h1 data-i18n="donateTitle">Support the author</h1>
+      </header>
+
+      <section class="payment-list" aria-label="Payment methods" data-i18n-aria-label="paymentMethods">
+        <figure class="payment-figure">
+          <figcaption data-i18n="donateSubtitle">Alipay</figcaption>
+          <img src="assets/alipay.jpg" alt="Alipay payment QR code" data-i18n-alt="alipayAlt" width="1080" height="1816">
+        </figure>
+
+        <hr class="payment-divider">
+
+        <figure class="payment-figure">
+          <figcaption data-i18n="wechatPay">WeChat Pay</figcaption>
+          <img src="assets/wechat.png" alt="WeChat Pay QR code" data-i18n-alt="wechatAlt" width="1118" height="1536">
+        </figure>
+
+        <p class="token-support">token支援</p>
+      </section>
+
+      <footer>v2.2.0 · yuzlyn</footer>
+    </main>
+  </body>
+</html>
