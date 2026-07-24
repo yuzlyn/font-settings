@@ -1,15 +1,17 @@
-# Universal Font Settings
+# Font Settings
 
 - 作者：**yuzlyn**
-- 版本：**v2.2.0**
-- 模块 ID：`font_setting_coloros16`
+- 版本：**v2.2.1**
+- 模块 ID：`font-settings`
 
 这是一个适用于 Android 8.0+ 的通用 KernelSU 字体模块，不限定手机品牌或 ROM。模块提供离线 WebUI，可分别上传中文和西文 `.ttf` 文件，并可选择内置 iOS、Google、Blobmoji、Facebook Emoji 或上传自定义 `.ttf/.otf`。所有替换均通过 KernelSU systemless mount 生效，不直接修改系统分区。
 
 ## 下载
 
-- 安装包：[universal_font_settings_v2.2.0_KSU.zip](./universal_font_settings_v2.2.0_KSU.zip)
-- 文件大小：`178,694,878` 字节；SHA-256：`B5BAB30A988C83FD040B824680D278D95945AE7732C72782DBEEDBE4D292BF9F`。
+- 安装包：[font-settings_v2.2.1_KSU.zip](./font-settings_v2.2.1_KSU.zip)
+- 文件大小：`178,694,835` 字节；SHA-256：`4D10BF750D9981B84F6BDE2828A6233C8AA94AD22339792A23B863EFEC91E389`。
+
+v2.2.1 将模块、源码目录、GitHub 仓库和安装包统一改名为 `font-settings`。KernelSU 模块 ID 同步改为 `font-settings`，安装时会尝试从旧 ID `font_setting_coloros16` 迁移已上传字体、Emoji 选择和字体配置备份。
 
 v2.2.0 在最底部新增“捐赠作者”卡片。点击后进入独立的 MD3 赞助页面，依次显示离线支付宝与微信支付二维码，两种支付方式之间使用分隔线，并在支付区下方显示“token支援”。
 
@@ -44,14 +46,14 @@ v1.0.1 修复 KernelSU 3.2.4 新版三参数异步 `ksu.exec` 接口兼容问题
 ## 安装
 
 1. 在 KernelSU 中停用其他字体替换模块，尤其是 `PixelFonts`、`TPTQ Ping Round SC + Caesium VF` 和 `tptq_and_googlesans`。
-2. 在 KernelSU 模块页面安装 `universal_font_settings_v2.2.0_KSU.zip`。
+2. 在 KernelSU 模块页面安装 `font-settings_v2.2.1_KSU.zip`。
 3. 重启手机，使模块及内置默认字体首次生效。
 4. 回到 KernelSU 模块页面，打开本模块的 WebUI。
 5. 分别选择中文和西文 TTF，等待进度条完成。
 6. 在“Emoji 设置”中保持系统默认、选择一个可用内置预设，或上传自定义 `.ttf/.otf`。
 7. 点击“重启手机”，重启后使用新字体与 Emoji。
 
-如果 KernelSU 在首次重启前允许打开 WebUI，页面会自动优先访问 `/data/adb/modules_update/font_setting_coloros16`；重启后会自动回退到活动模块目录。
+如果 KernelSU 在首次重启前允许打开 WebUI，页面会自动优先访问 `/data/adb/modules_update/font-settings`；重启后会自动回退到活动模块目录。
 
 ## 字体要求
 
@@ -67,7 +69,7 @@ v1.0.1 修复 KernelSU 3.2.4 新版三参数异步 `ksu.exec` 接口兼容问题
 发布包内置以下 Android 兼容的彩色 Emoji SFNT 字体：
 
 ```text
-FontSetting_ColorOS16/emoji/
+font-settings/emoji/
 ├── ios/AppleColorEmoji.ttf
 ├── google/NotoColorEmoji.ttf
 ├── blobmoji/Blobmoji.ttf
@@ -120,7 +122,7 @@ WebUI 通过 root bridge 读取 `theme_customization_overlay_packages` 中的 Mo
 出现字体缺字、界面方框或无法正常启动时，先在 KernelSU 中停用本模块并重启。adb root 可用时，也可以执行：
 
 ```sh
-adb shell su -c 'touch /data/adb/modules/font_setting_coloros16/disable'
+adb shell su -c 'touch /data/adb/modules/font-settings/disable'
 adb reboot
 ```
 
@@ -131,7 +133,7 @@ adb reboot
 ## 项目结构
 
 ```text
-FontSetting_ColorOS16/
+font-settings/
 ├── module.prop
 ├── customize.sh
 ├── post-fs-data.sh
@@ -185,10 +187,10 @@ node visual-check.mjs
 sh tests/fontconfig-test.sh
 ```
 
-在 `FontSetting_ColorOS16` 目录中使用支持 ZIP 的 bsdtar 打包，可确保 ZIP 内路径使用 Android 兼容的 `/`：
+在 `font-settings` 目录中使用支持 ZIP 的 bsdtar 打包，可确保 ZIP 内路径使用 Android 兼容的 `/`：
 
 ```powershell
-tar -a -c -f ..\universal_font_settings_v2.2.0_KSU.zip *
+tar -a -c -f ..\font-settings_v2.2.1_KSU.zip *
 ```
 
 本版本已完成以下检查：AOSP/OEM/product 字体 XML 夹具通过静态与可变字体转换；真实设备配置动态生成后全部可解析；所有 shell 脚本通过设备 `sh -n`；WebUI 的 MD3 token、交互、三语言和 390×844 / 1280×900 亮暗色布局通过 Playwright 验证；最终 ZIP 通过完整性与内置 Emoji 文件检查。

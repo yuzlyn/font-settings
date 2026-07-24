@@ -3,9 +3,9 @@ import { pathToFileURL } from "node:url";
 import { chromium } from "./.fontsetting-build/node_modules/playwright-core/index.mjs";
 
 const edge = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
-const pageUrl = pathToFileURL(path.resolve("FontSetting_ColorOS16/webroot/index.html")).href;
-const aboutUrl = pathToFileURL(path.resolve("FontSetting_ColorOS16/webroot/about.html")).href;
-const donateUrl = pathToFileURL(path.resolve("FontSetting_ColorOS16/webroot/donate.html")).href;
+const pageUrl = pathToFileURL(path.resolve("font-settings/webroot/index.html")).href;
+const aboutUrl = pathToFileURL(path.resolve("font-settings/webroot/about.html")).href;
+const donateUrl = pathToFileURL(path.resolve("font-settings/webroot/donate.html")).href;
 const browser = await chromium.launch({ executablePath: edge, headless: true });
 
 const viewports = [
@@ -63,7 +63,7 @@ for (const viewport of viewports) {
     window.ksu = {
       exec(command, options, callbackName) {
         let output = "ok";
-        if (command.includes("modules_update")) output = "/data/adb/modules/font_setting_coloros16";
+        if (command.includes("modules_update")) output = "/data/adb/modules/font-settings";
         if (command.includes("theme_customization_overlay_packages")) {
           output = JSON.stringify({
             "android.theme.customization.color_source": "home_wallpaper",
@@ -334,7 +334,7 @@ for (const viewport of viewports) {
   if (!layout.authorUsesPrimary || !layout.authorIsUnderTitle || !layout.avatarLoaded || layout.avatarSize.some((size) => size !== 44) || !layout.avatarRound) {
     throw new Error(`${testName} author capsule mismatch: ${JSON.stringify(layout)}`);
   }
-  if (layout.sourceHref !== "https://github.com/yuzlyn/font-setting-for-coloros16" && layout.sourceHref !== "https://github.com/yuzlyn/font-setting-for-coloros16/") {
+  if (layout.sourceHref !== "https://github.com/yuzlyn/font-settings" && layout.sourceHref !== "https://github.com/yuzlyn/font-settings/") {
     throw new Error(`${testName} source URL mismatch: ${JSON.stringify(layout)}`);
   }
   if (!layout.sourceBeforeResources || !layout.resourcesBeforeDonate || !layout.donateBeforeFooter || !layout.donateHref.endsWith("/donate.html") || !layout.donateCardUsesLow || !layout.sourceCardUsesLow || layout.sourceCardRadius !== 35 || layout.sourceCardBorder !== 0 || layout.sourceCardShadow !== "none") {
@@ -402,7 +402,7 @@ for (const localeCase of localeCases) {
     window.ksu = {
       exec(command, options, callbackName) {
         let output = "ok";
-        if (command.includes("modules_update")) output = "/data/adb/modules/font_setting_coloros16";
+        if (command.includes("modules_update")) output = "/data/adb/modules/font-settings";
         if (command.includes("theme_customization_overlay_packages")) output = "{}";
         if (command.endsWith(" status")) output = [
           "module=ok",
@@ -534,13 +534,13 @@ for (const viewport of viewports) {
 
     const testName = `about-${viewport.name}-${localeCase.browserLocale}`;
     if (errors.length) throw new Error(`${testName} page errors: ${errors.join("; ")}`);
-    if (about.lang !== localeCase.expectedLang || about.title !== "README" || about.h1 !== "Universal Font Settings" || about.sectionCount !== 6 || about.topBarVariant !== "small") {
+    if (about.lang !== localeCase.expectedLang || about.title !== "README" || about.h1 !== "Font Settings" || about.sectionCount !== 6 || about.topBarVariant !== "small") {
       throw new Error(`${testName} structure mismatch: ${JSON.stringify(about)}`);
     }
     for (const label of localeCase.expected) {
       if (!about.text.includes(label)) throw new Error(`${testName} missing ${label}: ${JSON.stringify(about)}`);
     }
-    if (!about.backLabel || about.backLabel !== about.backTitle || !about.avatarLoaded || about.sourceHref !== "https://github.com/yuzlyn/font-setting-for-coloros16" || about.telegramHref !== "https://t.me/fontsettings" || !about.qqHref.startsWith("mqqapi://card/show_pslcard?")) {
+    if (!about.backLabel || about.backLabel !== about.backTitle || !about.avatarLoaded || about.sourceHref !== "https://github.com/yuzlyn/font-settings" || about.telegramHref !== "https://t.me/fontsettings" || !about.qqHref.startsWith("mqqapi://card/show_pslcard?")) {
       throw new Error(`${testName} links or accessibility mismatch: ${JSON.stringify(about)}`);
     }
     if (about.scrollWidth > about.viewport || about.overflow.length) {

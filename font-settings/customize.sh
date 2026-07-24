@@ -1,7 +1,7 @@
 #!/system/bin/sh
 
 ui_print "*******************************"
-ui_print " universal font settings"
+ui_print " font settings"
 ui_print " by yuzlyn"
 ui_print "*******************************"
 
@@ -9,8 +9,10 @@ sdk="$(getprop ro.build.version.sdk)"
 case "$sdk" in ''|*[!0-9]*) abort "! 无法读取 Android API 版本" ;; esac
 [ "$sdk" -ge 26 ] || abort "! 仅支持 Android 8.0 及以上版本（API 26+）"
 
-MODID=font_setting_coloros16
+MODID=font-settings
+LEGACY_MODID=font_setting_coloros16
 OLDMOD="/data/adb/modules/$MODID"
+[ -d "$OLDMOD" ] || OLDMOD="/data/adb/modules/$LEGACY_MODID"
 
 # 更新模块时保留用户已经上传的字体和元数据。
 if [ -f "$OLDMOD/system/fonts/FontSettingChinese.ttf" ] && [ -f "$OLDMOD/system/fonts/FontSettingWestern.ttf" ]; then

@@ -6,9 +6,9 @@
     <meta name="color-scheme" content="light dark">
     <title>README</title>
     <link rel="stylesheet" href="vendor/mdui.css">
-    <link rel="stylesheet" href="about.css?v=220-donate">
+    <link rel="stylesheet" href="about.css?v=221-rename">
     <script src="vendor/mdui.global.js"></script>
-    <script src="about.js?v=220-donate" defer></script>
+    <script src="about.js?v=221-rename" defer></script>
   </head>
   <body>
     <mdui-top-app-bar variant="small">
@@ -20,8 +20,8 @@
 
     <main>
       <header class="about-header">
-        <p class="version-label">Universal Font Settings · v2.2.0</p>
-        <h1>Universal Font Settings</h1>
+        <p class="version-label">Font Settings · v2.2.1</p>
+        <h1>Font Settings</h1>
         <p class="about-lead" data-i18n="overview">A universal KernelSU module for managing system fonts and Emoji on Android 8.0 and later.</p>
         <a class="about-author" href="https://github.com/yuzlyn" target="_blank" rel="noopener noreferrer" aria-label="Open yuzlyn's GitHub profile" data-i18n-aria-label="authorLinkLabel">
           <img src="assets/yuzlyn-github.png" alt="yuzlyn's GitHub avatar" data-i18n-alt="authorAvatarAlt">
@@ -68,21 +68,21 @@
         <section class="readme-section">
           <h2 data-i18n="recoveryTitle">Recovery</h2>
           <p data-i18n="recoveryText">If fonts are missing or the system cannot start normally, disable the module through KernelSU and restart. With adb root available:</p>
-          <pre><code>adb shell su -c 'touch /data/adb/modules/font_setting_coloros16/disable'
+          <pre><code>adb shell su -c 'touch /data/adb/modules/font-settings/disable'
 adb reboot</code></pre>
         </section>
 
         <section class="readme-section">
           <h2 data-i18n="linksTitle">Links</h2>
           <nav class="readme-links" aria-label="Project links" data-i18n-aria-label="projectLinksLabel">
-            <a href="https://github.com/yuzlyn/font-setting-for-coloros16" target="_blank" rel="noopener noreferrer" data-i18n="sourceRepository">Source repository</a>
+            <a href="https://github.com/yuzlyn/font-settings" target="_blank" rel="noopener noreferrer" data-i18n="sourceRepository">Source repository</a>
             <a href="https://t.me/fontsettings" target="_blank" rel="noopener noreferrer" data-i18n="telegramGroup">Telegram group</a>
             <a href="mqqapi://card/show_pslcard?src_type=internal&amp;version=1&amp;uin=1082347624&amp;card_type=group&amp;source=qrcode" data-i18n="qqGroup">QQ group 1082347624</a>
           </nav>
         </section>
       </article>
 
-      <footer>v2.2.0 · yuzlyn</footer>
+      <footer>v2.2.1 · yuzlyn</footer>
     </main>
   </body>
 </html>

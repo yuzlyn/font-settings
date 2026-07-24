@@ -3,7 +3,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 
 const workspace = process.cwd();
-const moduleDir = path.join(workspace, "FontSetting_ColorOS16");
+const moduleDir = path.join(workspace, "font-settings");
 const mduiDir = path.join(workspace, ".fontsetting-build", "node_modules", "mdui");
 const materialColorDir = path.join(workspace, ".fontsetting-build", "node_modules", "@material", "material-color-utilities");
 const esbuildBin = path.join(workspace, ".fontsetting-build", "node_modules", "esbuild", "bin", "esbuild");

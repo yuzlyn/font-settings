@@ -1,4 +1,4 @@
-const MODULE_ID = "font_setting_coloros16";
+const MODULE_ID = "font-settings";
 const ACTIVE_MODDIR = `/data/adb/modules/${MODULE_ID}`;
 const UPDATE_MODDIR = `/data/adb/modules_update/${MODULE_ID}`;
 const CHUNK_SIZE = 48 * 1024;
