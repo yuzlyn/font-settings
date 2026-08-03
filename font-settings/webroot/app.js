@@ -64,6 +64,10 @@ const TRANSLATIONS = {
     fontHeaderIncomplete: "字体文件头不完整",
     invalidSfnt: "文件不是有效的 SFNT/TrueType 字体",
     invalidTableDirectory: "字体表目录无效",
+    fontCmapMissing: "字体缺少可用的 Unicode 字符映射表",
+    fontCmapUnsupported: "暂不支持此字体的字符映射格式",
+    fontCmapTooLarge: "按中西文范围处理后，字体字符映射表过大",
+    fontIsolationFailed: "无法隔离此字体的中文与西文字形",
     roleFontSaved: "{role}字体已保存",
     chineseRole: "中文",
     latinRole: "西文",
@@ -159,6 +163,10 @@ const TRANSLATIONS = {
     fontHeaderIncomplete: "字型檔頭不完整",
     invalidSfnt: "檔案不是有效的 SFNT/TrueType 字型",
     invalidTableDirectory: "字型表目錄無效",
+    fontCmapMissing: "字型缺少可用的 Unicode 字元對應表",
+    fontCmapUnsupported: "暫不支援此字型的字元對應格式",
+    fontCmapTooLarge: "依中西文範圍處理後，字型字元對應表過大",
+    fontIsolationFailed: "無法隔離此字型的中文與西文字形",
     roleFontSaved: "{role}字型已儲存",
     chineseRole: "中文",
     latinRole: "西文",
@@ -254,6 +262,10 @@ const TRANSLATIONS = {
     fontHeaderIncomplete: "The font file header is incomplete",
     invalidSfnt: "The file is not a valid SFNT/TrueType font",
     invalidTableDirectory: "The font table directory is invalid",
+    fontCmapMissing: "The font has no usable Unicode character map",
+    fontCmapUnsupported: "This font's character-map format is not supported",
+    fontCmapTooLarge: "The isolated character map is too large for this font format",
+    fontIsolationFailed: "Could not isolate the font's Chinese and Latin glyphs",
     roleFontSaved: "{role} font saved",
     chineseRole: "Chinese",
     latinRole: "Latin",
@@ -337,62 +349,10 @@ function localizedPreset(mode) {
     detail: preset.detailKey ? t(preset.detailKey) : preset.detail,
   };
 }
-const COLOR_TOKENS = {
-  background: "background",
-  "on-background": "onBackground",
-  surface: "surface",
-  "surface-dim": "surfaceDim",
-  "surface-bright": "surfaceBright",
-  "surface-container-lowest": "surfaceContainerLowest",
-  "surface-container-low": "surfaceContainerLow",
-  "surface-container": "surfaceContainer",
-  "surface-container-high": "surfaceContainerHigh",
-  "surface-container-highest": "surfaceContainerHighest",
-  "on-surface": "onSurface",
-  "surface-variant": "surfaceVariant",
-  "on-surface-variant": "onSurfaceVariant",
-  "inverse-surface": "inverseSurface",
-  "inverse-on-surface": "inverseOnSurface",
-  outline: "outline",
-  "outline-variant": "outlineVariant",
-  shadow: "shadow",
-  scrim: "scrim",
-  "surface-tint": "surfaceTint",
-  "surface-tint-color": "surfaceTint",
-  primary: "primary",
-  "on-primary": "onPrimary",
-  "primary-container": "primaryContainer",
-  "on-primary-container": "onPrimaryContainer",
-  "inverse-primary": "inversePrimary",
-  secondary: "secondary",
-  "on-secondary": "onSecondary",
-  "secondary-container": "secondaryContainer",
-  "on-secondary-container": "onSecondaryContainer",
-  tertiary: "tertiary",
-  "on-tertiary": "onTertiary",
-  "tertiary-container": "tertiaryContainer",
-  "on-tertiary-container": "onTertiaryContainer",
-  error: "error",
-  "on-error": "onError",
-  "error-container": "errorContainer",
-  "on-error-container": "onErrorContainer",
-  "primary-fixed": "primaryFixed",
-  "primary-fixed-dim": "primaryFixedDim",
-  "on-primary-fixed": "onPrimaryFixed",
-  "on-primary-fixed-variant": "onPrimaryFixedVariant",
-  "secondary-fixed": "secondaryFixed",
-  "secondary-fixed-dim": "secondaryFixedDim",
-  "on-secondary-fixed": "onSecondaryFixed",
-  "on-secondary-fixed-variant": "onSecondaryFixedVariant",
-  "tertiary-fixed": "tertiaryFixed",
-  "tertiary-fixed-dim": "tertiaryFixedDim",
-  "on-tertiary-fixed": "onTertiaryFixed",
-  "on-tertiary-fixed-variant": "onTertiaryFixedVariant",
-};
 let moduleDir = ACTIVE_MODDIR;
 let fontctl = `${moduleDir}/tools/fontctl.sh`;
 let callbackSequence = 0;
-let monetSeed = "#4f635b";
+let monetSeed = window.FontSettingsTheme?.getSeed() || "#4f635b";
 
 const roles = {
   chinese: {
@@ -433,6 +393,7 @@ const darkMode = window.matchMedia("(prefers-color-scheme: dark)");
 let uploadInProgress = false;
 let currentEmojiMode = "default";
 let titleAnimationFrame = 0;
+let monetSeedRequest = null;
 
 function exec(command, options = {}) {
   return new Promise((resolve, reject) => {
@@ -498,56 +459,40 @@ function assertCommand(result, expected) {
   }
 }
 
-function normalizeSeed(value) {
-  const hex = String(value || "").replace(/[^0-9a-f]/gi, "");
-  if (hex.length < 6) return null;
-  return `#${hex.slice(-6).toLowerCase()}`;
-}
-
 function applyColorScheme() {
-  document.documentElement.style.setProperty("--monet-seed", monetSeed);
-  if (!window.MaterialKolor) {
+  if (window.FontSettingsTheme) {
+    window.FontSettingsTheme.applyCurrent();
+    monetSeed = window.FontSettingsTheme.getSeed();
+  } else {
+    document.documentElement.style.setProperty("--monet-seed", monetSeed);
     mdui.setColorScheme(monetSeed);
-    return;
   }
-
-  const {
-    Hct,
-    MaterialDynamicColors,
-    SchemeTonalSpot,
-    argbFromHex,
-    blueFromArgb,
-    greenFromArgb,
-    redFromArgb,
-  } = window.MaterialKolor;
-  const source = Hct.fromInt(argbFromHex(monetSeed));
-  const scheme = new SchemeTonalSpot(source, darkMode.matches, 0);
-  const root = document.documentElement;
-
-  for (const [token, dynamicName] of Object.entries(COLOR_TOKENS)) {
-    const argb = MaterialDynamicColors[dynamicName].getArgb(scheme);
-    const rgb = `${redFromArgb(argb)}, ${greenFromArgb(argb)}, ${blueFromArgb(argb)}`;
-    root.style.setProperty(`--mdui-color-${token}`, rgb);
-  }
-
-  root.dataset.colorSource = "monet";
   monetLabel.textContent = `Monet ${monetSeed.toUpperCase()}`;
 }
 
-async function loadMonetSeed() {
-  try {
-    const output = await exec("settings get secure theme_customization_overlay_packages");
-    const start = output.indexOf("{");
-    const settings = JSON.parse(start >= 0 ? output.slice(start) : output);
-    const seed = normalizeSeed(
-      settings["android.theme.customization.system_palette"] ||
-        settings["android.theme.customization.accent_color"],
-    );
-    if (seed) monetSeed = seed;
-  } catch {
-    // Keep the local fallback seed when the ROM does not expose Monet settings.
-  }
-  applyColorScheme();
+function loadMonetSeed() {
+  if (monetSeedRequest) return monetSeedRequest;
+  monetSeedRequest = (async () => {
+    try {
+      const output = await exec("settings get secure theme_customization_overlay_packages");
+      const start = output.indexOf("{");
+      const settings = JSON.parse(start >= 0 ? output.slice(start) : output);
+      const seed = window.FontSettingsTheme?.normalizeSeed(
+        settings["android.theme.customization.system_palette"] ||
+          settings["android.theme.customization.accent_color"],
+      );
+      if (seed) {
+        window.FontSettingsTheme.updateSystemSeed(seed);
+        monetSeed = window.FontSettingsTheme.getSeed();
+      }
+    } catch {
+      // Keep the cached seed when the ROM does not expose Monet settings.
+    }
+    applyColorScheme();
+  })().finally(() => {
+    monetSeedRequest = null;
+  });
+  return monetSeedRequest;
 }
 
 async function resolveModuleDir() {
@@ -803,19 +748,22 @@ async function uploadFont(role, file) {
 
   try {
     const info = await inspectFont(file);
-    assertCommand(await exec(`${fontctl} begin ${role} ${file.size}`), "begin");
+    if (!window.FontRoleIsolation) throw new Error("font_isolation_failed");
+    const source = new Uint8Array(await file.arrayBuffer());
+    const isolated = window.FontRoleIsolation.isolateFont(source, role);
+    assertCommand(await exec(`${fontctl} begin ${role} ${isolated.byteLength}`), "begin");
 
-    for (let offset = 0; offset < file.size; offset += CHUNK_SIZE) {
-      const end = Math.min(offset + CHUNK_SIZE, file.size);
-      const bytes = new Uint8Array(await file.slice(offset, end).arrayBuffer());
+    for (let offset = 0; offset < isolated.byteLength; offset += CHUNK_SIZE) {
+      const end = Math.min(offset + CHUNK_SIZE, isolated.byteLength);
+      const bytes = isolated.subarray(offset, end);
       await appendChunk(role, bytes);
-      setProgress(current.progress, end / file.size);
+      setProgress(current.progress, end / isolated.byteLength);
       await new Promise((resolve) => requestAnimationFrame(resolve));
     }
 
     const variable = info.variableWeight ? 1 : 0;
     const name = utf8ToBase64(file.name);
-    assertCommand(await exec(`${fontctl} commit ${role} ${file.size} ${variable} ${name}`), "commit");
+    assertCommand(await exec(`${fontctl} commit ${role} ${isolated.byteLength} ${variable} ${name}`), "commit");
     showMessage(t("roleFontSaved", { role: t(role === "chinese" ? "chineseRole" : "latinRole") }));
     await refreshStatus();
   } catch (error) {
@@ -879,6 +827,10 @@ function formatFontError(error) {
     western_family_not_found: t("westernFamilyNotFound"),
     chinese_family_not_found: t("chineseFamilyNotFound"),
     config_apply_failed: t("configApplyFailed"),
+    font_cmap_missing: t("fontCmapMissing"),
+    font_cmap_unsupported: t("fontCmapUnsupported"),
+    font_cmap_too_large: t("fontCmapTooLarge"),
+    font_isolation_failed: t("fontIsolationFailed"),
   };
   return messages[message] || message || t("uploadFailed");
 }
@@ -1022,6 +974,10 @@ function initialize() {
   }
 
   darkMode.addEventListener("change", applyColorScheme);
+  window.addEventListener("focus", loadMonetSeed);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") loadMonetSeed();
+  });
   window.addEventListener("scroll", updateTopBarTitle, { passive: true });
   window.addEventListener("resize", updateTopBarTitle, { passive: true });
   updateTopBarTitle();

@@ -12,7 +12,7 @@ const ABOUT_TRANSLATIONS = {
     compatibilityXml: "使用标准 Android familyset 或 fonts-modification XML 字体配置。",
     compatibilityNote: "使用私有字体引擎的设备可能会在安装时被拒绝，避免写入不安全的配置。",
     featuresTitle: "功能",
-    featureFonts: "分别上传中文和西文 TTF 文件。",
+    featureFonts: "分别上传中文和西文 TTF 文件，并隔离混合字体的中西文字形映射。",
     featureEmoji: "使用四款内置 Emoji，或上传自定义 TTF/OTF。",
     featureDetection: "安装时检测设备实际的字体 XML 与 Emoji 目标文件名。",
     featureLanguages: "WebUI 支持简体中文、台湾繁体中文和英文。",
@@ -57,7 +57,7 @@ const ABOUT_TRANSLATIONS = {
     compatibilityXml: "使用標準 Android familyset 或 fonts-modification XML 字型設定。",
     compatibilityNote: "使用私有字型引擎的裝置可能會在安裝時被拒絕，避免寫入不安全的設定。",
     featuresTitle: "功能",
-    featureFonts: "分別上傳中文與西文 TTF 檔案。",
+    featureFonts: "分別上傳中文與西文 TTF 檔案，並隔離混合字型的中西文字形對應。",
     featureEmoji: "使用四款內建 Emoji，或上傳自訂 TTF/OTF。",
     featureDetection: "安裝時偵測裝置實際的字型 XML 與 Emoji 目標檔名。",
     featureLanguages: "WebUI 支援簡體中文、台灣繁體中文與英文。",
@@ -102,7 +102,7 @@ const ABOUT_TRANSLATIONS = {
     compatibilityXml: "Standard Android familyset or fonts-modification XML font configuration.",
     compatibilityNote: "Devices using a private font engine may be rejected during installation instead of receiving an unsafe configuration.",
     featuresTitle: "Features",
-    featureFonts: "Upload separate Chinese and Latin TTF files.",
+    featureFonts: "Upload separate Chinese and Latin TTF files with mixed-script glyph isolation.",
     featureEmoji: "Use four built-in Emoji styles or upload a custom TTF/OTF.",
     featureDetection: "Detect the device's actual font XML and Emoji target filenames during installation.",
     featureLanguages: "WebUI languages: Simplified Chinese, Traditional Chinese for Taiwan, and English.",
@@ -190,26 +190,23 @@ function exec(command) {
 }
 
 async function applyTheme() {
-  let seed = "#4f635b";
   try {
     const output = await exec("settings get secure theme_customization_overlay_packages");
     const start = output.indexOf("{");
     const settings = JSON.parse(start >= 0 ? output.slice(start) : output);
-    const value = String(
+    const seed = window.FontSettingsTheme?.normalizeSeed(
       settings["android.theme.customization.system_palette"] ||
-      settings["android.theme.customization.accent_color"] ||
-      "",
-    ).replace(/[^0-9a-f]/gi, "");
-    if (value.length >= 6) seed = `#${value.slice(-6)}`;
+        settings["android.theme.customization.accent_color"],
+    );
+    if (seed) window.FontSettingsTheme.updateSystemSeed(seed);
   } catch {
-    // Use the local seed when the page is opened outside KernelSU.
+    // Keep the cached seed when the page is opened outside KernelSU.
   }
-  mdui.setColorScheme(seed);
 }
 
 function initialize() {
   applyTranslations();
-  mdui.setColorScheme("#4f635b");
+  if (!window.FontSettingsTheme) mdui.setColorScheme("#4f635b");
   applyTheme();
   document.querySelector("#about-back").addEventListener("click", () => {
     if (window.history.length > 1) window.history.back();
