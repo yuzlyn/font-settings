@@ -6,12 +6,12 @@
     <meta name="color-scheme" content="light dark">
     <title>Font settings</title>
     <link rel="stylesheet" href="vendor/mdui.css">
-    <link rel="stylesheet" href="styles.css?v=224-lite-package">
+    <link rel="stylesheet" href="styles.css?v=225-lite-package">
     <script src="vendor/mdui.global.js"></script>
     <script src="vendor/material-kolor.js"></script>
-    <script src="theme-cache.js?v=224-lite-package"></script>
-    <script src="font-isolation.js?v=224-lite-package" defer></script>
-    <script src="app.js?v=224-lite-package" defer></script>
+    <script src="theme-cache.js?v=225-lite-package"></script>
+    <script src="font-isolation.js?v=225-lite-package" defer></script>
+    <script src="app.js?v=225-lite-package" defer></script>
   </head>
   <body>
     <mdui-top-app-bar variant="small" scroll-behavior="elevate">
@@ -105,6 +105,13 @@
             </div>
             <mdui-chip id="western-type" variant="filter" class="type-chip" data-i18n="loading">Loading</mdui-chip>
             <mdui-button id="western-upload" variant="tonal" class="select-button" data-i18n="chooseLatinTtf">Choose Latin TTF</mdui-button>
+          </div>
+          <div class="font-size-control">
+            <div class="font-size-copy">
+              <span data-i18n="latinSize">西文字号</span>
+              <strong id="western-size-value">90%</strong>
+            </div>
+            <input id="western-size" class="font-size-slider" type="range" min="80" max="110" step="1" value="90" aria-label="Latin font size" data-i18n-aria-label="latinSize">
           </div>
           <mdui-linear-progress id="western-progress" class="font-progress hidden" value="0" role="progressbar" aria-label="Uploading Latin font" data-i18n-aria-label="uploadingLatinFont" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></mdui-linear-progress>
           <input id="western-file" type="file" accept=".ttf,font/ttf" hidden>
@@ -226,7 +233,7 @@
       </a>
 
       <footer aria-label="Version information" data-i18n-aria-label="versionInfo">
-        <span>v2.2.4</span>
+        <span>v2.2.5</span>
         <span aria-hidden="true">·</span>
         <span>yuzlyn</span>
       </footer>

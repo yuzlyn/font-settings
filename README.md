@@ -1,15 +1,17 @@
 # Font Settings
 
 - 作者：**yuzlyn**
-- 版本：**v2.2.4**
+- 版本：**v2.2.5**
 - 模块 ID：`font-settings`
 
 这是一个适用于 Android 8.0+ 的通用 KernelSU 字体模块，不限定手机品牌或 ROM。模块提供离线 WebUI，可分别上传中文和西文 `.ttf` 文件，并可选择内置 iOS、Google、Blobmoji、Facebook Emoji 或上传自定义 `.ttf/.otf`。所有替换均通过 KernelSU systemless mount 生效，不直接修改系统分区。
 
 ## 下载
 
-- 完整包：[font-settings_v2.2.4_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.2.4/font-settings_v2.2.4_KSU.zip)，`178,703,024` 字节，SHA-256：`972F578FAD8030F2B2A1C05EC3C562443ECAD97452C02920E3D2DB1F16C83391`。
-- 精简包：[font-settings_v2.2.4_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.2.4/font-settings_v2.2.4_lite_KSU.zip)，`32,982,297` 字节，SHA-256：`B63F535298713A6E01E66870B3180FB9F187B6C06EBE71F57461C7D9A08C934B`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+- 完整包：[font-settings_v2.2.5_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.2.5/font-settings_v2.2.5_KSU.zip)，`178,704,032` 字节，SHA-256：`B826A229F85DAD0449EA429BB302677060A2F0D8CDC24A089EB5BE4E653172BD`。
+- 精简包：[font-settings_v2.2.5_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.2.5/font-settings_v2.2.5_lite_KSU.zip)，`32,983,305` 字节，SHA-256：`50B4E54B6B9BD88B9CD053E2E460E360071022251735624AC7D8A3104477C05A`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+
+v2.2.5 新增西文字号调节。WebUI 可在 `80%` 到 `110%` 间调整西文字体 XML 的 `size` 属性，默认改为 `90%`，用于缓解部分西文字体字面过大、挤占相邻行导致显示混乱的问题。
 
 v2.2.4 新增精简安装包，移除所有内置 Emoji 字体预设，显著减小下载体积；完整包仍保留全部 Emoji 预设。
 
@@ -56,8 +58,9 @@ v1.0.1 修复 KernelSU 3.2.4 新版三参数异步 `ksu.exec` 接口兼容问题
 3. 重启手机，使模块及内置默认字体首次生效。
 4. 回到 KernelSU 模块页面，打开本模块的 WebUI。
 5. 分别选择中文和西文 TTF，等待进度条完成。
-6. 在“Emoji 设置”中保持系统默认、选择一个可用内置预设，或上传自定义 `.ttf/.otf`。
-7. 点击“重启手机”，重启后使用新字体与 Emoji。
+6. 如西文字体偏大，可在“西文字号”滑块中调整比例；默认 `90%`。
+7. 在“Emoji 设置”中保持系统默认、选择一个可用内置预设，或上传自定义 `.ttf/.otf`。
+8. 点击“重启手机”，重启后使用新字体与 Emoji。
 
 如果 KernelSU 在首次重启前允许打开 WebUI，页面会自动优先访问 `/data/adb/modules_update/font-settings`；重启后会自动回退到活动模块目录。
 
@@ -102,7 +105,7 @@ WebUI 通过 root bridge 读取 `theme_customization_overlay_packages` 中的 Mo
 
 页面背景使用 `surface-container`，字体与系统卡片使用单一的 `surface-container-low` 大色块。卡片采用 35dp 圆角，不使用硬描边、内嵌白色内容层或阴影。字体类型 FilterChip 与分段按钮轨道使用 `surface-container-highest`；KernelSU 已连接状态使用 `primary-container` / `on-primary-container`；上传操作使用 Filled Tonal Button，并以 `primary-container` 提供强调层级。Chip、操作按钮和分段选择器均为 Full Shape。重启按钮禁用时使用 12% `onSurface` 背景和 38% `onSurface` 文字。亮色与暗色模式均直接使用 MaterialKolor 动态方案生成的对应 token。
 
-上传字体时，对应字体卡片显示确定进度的 Material 直线进度条；读取模块配置时，页面顶部显示默认的不确定线性进度动画。减少动态效果的系统偏好开启后，动画会自动降级。
+上传字体时，对应字体卡片显示确定进度的 Material 直线进度条；读取模块配置时，页面顶部显示默认的不确定线性进度动画。西文字体卡片提供 `80%` 到 `110%` 的字号滑块，调整后会重新生成字体 XML，并提示重启生效。减少动态效果的系统偏好开启后，动画会自动降级。
 
 中文字体使用“文”作为前导图标；西文字体使用纯西文 `Aa` 图标，不使用带中文“文”的翻译图标。
 
@@ -116,6 +119,7 @@ WebUI 通过 root bridge 读取 `theme_customization_overlay_packages` 中的 Mo
 - 西文字体映射到系统默认 `sans-serif`、常见 OEM `sys-sans-en` / `op-sans-en`，以及旧 Android 的首个未命名字族。
 - 中文字体只映射 `zh` / `yue` 语言 family，包括 `zh-Hans`、`zh-Hant`、`zh-Bopo` 等，不改写日文、韩文、Emoji、数学符号或 serif family。
 - 生成器会移除原字体专属的 TTC `index`、PostScript 名称和轴声明；可变字体按原 XML 权重写入 `wght` 轴，静态字体交给 Android 合成权重。
+- 西文字号以 `data/western.size` 保存，范围限制为 `80` 到 `110`。非 `100` 时，生成器会为西文字体节点写入 Android 字体 XML 的 `size` 属性。
 - 浏览器以 48 KiB 分块通过 KernelSU root bridge 写入临时文件。
 - 上传前由浏览器重建字体的 Unicode `cmap` 并重算 SFNT 校验和；其他字体表和字形数据保持不变。
 - 提交时校验最终文件大小，再替换模块中的固定字体文件，并从设备原始备份重新生成所有已识别的字体 XML。
@@ -148,7 +152,7 @@ font-settings/
 ├── service.sh
 ├── action.sh
 ├── config/original/        # 安装时生成的设备原始字体 XML 备份
-├── data/                   # 配置清单、映射数量、文件名、字体类型和待重启状态
+├── data/                   # 配置清单、映射数量、文件名、字体类型、字号和待重启状态
 ├── emoji/
 │   ├── ios/AppleColorEmoji.ttf
 │   ├── google/NotoColorEmoji.ttf
@@ -201,7 +205,7 @@ sh tests/fontconfig-test.sh
 在 `font-settings` 目录中使用支持 ZIP 的 bsdtar 打包，可确保 ZIP 内路径使用 Android 兼容的 `/`：
 
 ```powershell
-tar -a -c -f ..\font-settings_v2.2.4_KSU.zip *
+tar -a -c -f ..\font-settings_v2.2.5_KSU.zip *
 ```
 
 本版本已完成以下检查：AOSP/OEM/product 字体 XML 夹具通过静态与可变字体转换；真实设备配置动态生成后全部可解析；所有 shell 脚本通过设备 `sh -n`；WebUI 的 MD3 token、交互、三语言和 390×844 / 1280×900 亮暗色布局通过 Playwright 验证；最终 ZIP 通过完整性与内置 Emoji 文件检查。

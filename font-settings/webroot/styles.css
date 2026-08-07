@@ -525,6 +525,38 @@ h2 {
   margin: -8px 24px 18px;
 }
 
+.font-size-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 320px);
+  align-items: center;
+  gap: 16px;
+  padding: 0 24px 22px 80px;
+}
+
+.font-size-copy {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: rgb(var(--mdui-color-on-surface-variant));
+  font-size: 13px;
+  line-height: 18px;
+  letter-spacing: 0;
+}
+
+.font-size-copy strong {
+  color: rgb(var(--mdui-color-on-surface));
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.font-size-slider {
+  width: 100%;
+  accent-color: rgb(var(--mdui-color-primary));
+}
+
 .message-card {
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr);
@@ -828,6 +860,12 @@ footer {
     align-self: center;
   }
 
+  .font-size-control {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 0 20px 20px 72px;
+  }
+
   .system-item {
     grid-template-areas:
       "icon copy copy"
@@ -879,6 +917,10 @@ footer {
   .type-chip,
   .select-button {
     justify-self: start;
+  }
+
+  .font-size-control {
+    padding-left: 20px;
   }
 
   .system-item {

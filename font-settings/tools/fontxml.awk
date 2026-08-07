@@ -36,13 +36,16 @@ function emit_font(start, finish, role,    opening, indent, weight, target, vari
   gsub(/[\r\n\t]+/, " ", opening)
   sub(/^[[:space:]]*/, "", opening)
   sub(/>.*/, ">", opening)
-  gsub(/[[:space:]]+(index|postScriptName|supportedAxes|axes|variationSettings)="[^"]*"/, "", opening)
+  gsub(/[[:space:]]+(index|postScriptName|supportedAxes|axes|variationSettings|size)="[^"]*"/, "", opening)
 
   weight = attribute(opening, "weight")
   if (weight == "") weight = "400"
   if (role == "western") {
     target = western
     variable = western_variable
+    if (western_size != "" && western_size != "100") {
+      sub(/>$/, " size=\"" western_size "\">", opening)
+    }
     western_fonts++
   } else {
     target = chinese

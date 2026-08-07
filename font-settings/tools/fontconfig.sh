@@ -19,6 +19,16 @@ read_flag() {
   echo "$value"
 }
 
+read_percent() {
+  value="$(cat "$1" 2>/dev/null)"
+  case "$value" in
+    ''|*[!0-9]*) value=90 ;;
+  esac
+  [ "$value" -ge 80 ] 2>/dev/null || value=80
+  [ "$value" -le 110 ] 2>/dev/null || value=110
+  echo "$value"
+}
+
 valid_relative_path() {
   case "$1" in
     etc/fonts.xml|etc/font_fallback.xml|system_ext/etc/fonts.xml|system_ext/etc/fonts_base.xml|product/etc/fonts.xml|product/etc/fonts_customization.xml|vendor/etc/fonts.xml) return 0 ;;
@@ -78,6 +88,7 @@ apply_configs() {
 
   western_variable="$(read_flag "$DATA_DIR/western.variable")"
   chinese_variable="$(read_flag "$DATA_DIR/chinese.variable")"
+  western_size="$(read_percent "$DATA_DIR/western.size")"
   total_western=0
   total_chinese=0
 
@@ -95,6 +106,7 @@ apply_configs() {
       -v chinese="FontSettingChinese.ttf" \
       -v western_variable="$western_variable" \
       -v chinese_variable="$chinese_variable" \
+      -v western_size="$western_size" \
       -v allow_unnamed="$allow_unnamed" \
       -v stats="$stats_file" \
       -f "$AWK_SCRIPT" "$source" > "$output.new" || fail "font_config_generate_failed"

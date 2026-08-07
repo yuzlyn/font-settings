@@ -17,6 +17,7 @@ const TRANSLATIONS = {
     fontFilesLabel: "字体文件",
     chineseFont: "中文字体",
     latinFont: "西文字体",
+    latinSize: "西文字号",
     loading: "读取中",
     chooseChineseTtf: "选择中文 TTF",
     chooseLatinTtf: "选择西文 TTF",
@@ -69,6 +70,8 @@ const TRANSLATIONS = {
     fontCmapTooLarge: "按中西文范围处理后，字体字符映射表过大",
     fontIsolationFailed: "无法隔离此字体的中文与西文字形",
     roleFontSaved: "{role}字体已保存",
+    latinSizeSaved: "西文字号已设为 {size}%",
+    latinSizeError: "西文字号设置失败",
     chineseRole: "中文",
     latinRole: "西文",
     uploadFailed: "上传失败",
@@ -116,6 +119,7 @@ const TRANSLATIONS = {
     fontFilesLabel: "字型檔案",
     chineseFont: "中文字型",
     latinFont: "西文字型",
+    latinSize: "西文字號",
     loading: "讀取中",
     chooseChineseTtf: "選擇中文 TTF",
     chooseLatinTtf: "選擇西文 TTF",
@@ -168,6 +172,8 @@ const TRANSLATIONS = {
     fontCmapTooLarge: "依中西文範圍處理後，字型字元對應表過大",
     fontIsolationFailed: "無法隔離此字型的中文與西文字形",
     roleFontSaved: "{role}字型已儲存",
+    latinSizeSaved: "西文字號已設為 {size}%",
+    latinSizeError: "西文字號設定失敗",
     chineseRole: "中文",
     latinRole: "西文",
     uploadFailed: "上傳失敗",
@@ -215,6 +221,7 @@ const TRANSLATIONS = {
     fontFilesLabel: "Font files",
     chineseFont: "Chinese font",
     latinFont: "Latin font",
+    latinSize: "Latin size",
     loading: "Loading",
     chooseChineseTtf: "Choose Chinese TTF",
     chooseLatinTtf: "Choose Latin TTF",
@@ -267,6 +274,8 @@ const TRANSLATIONS = {
     fontCmapTooLarge: "The isolated character map is too large for this font format",
     fontIsolationFailed: "Could not isolate the font's Chinese and Latin glyphs",
     roleFontSaved: "{role} font saved",
+    latinSizeSaved: "Latin size set to {size}%",
+    latinSizeError: "Could not set Latin size",
     chineseRole: "Chinese",
     latinRole: "Latin",
     uploadFailed: "Upload failed",
@@ -386,6 +395,8 @@ const emojiDialog = document.querySelector("#emoji-dialog");
 const emojiPickerTrigger = document.querySelector("#emoji-picker-trigger");
 const emojiFile = document.querySelector("#emoji-file");
 const emojiProgress = document.querySelector("#emoji-progress");
+const westernSize = document.querySelector("#western-size");
+const westernSizeValue = document.querySelector("#western-size-value");
 const topAppBar = document.querySelector("mdui-top-app-bar");
 const compactTitle = document.querySelector("#compact-title");
 const largeTitle = document.querySelector(".large-title");
@@ -532,6 +543,11 @@ function formatBytes(bytes) {
   if (size < 1024) return `${numberFormatter.format(size)} B`;
   if (size < 1024 * 1024) return `${numberFormatter.format(size / 1024)} KB`;
   return `${numberFormatter.format(size / (1024 * 1024))} MB`;
+}
+
+function normalizeWesternSize(value) {
+  const size = Math.round(Number(value) || 90);
+  return Math.max(80, Math.min(110, size));
 }
 
 function showMessage(message) {
@@ -710,6 +726,7 @@ function setBusy(role, busy) {
   if (busy) setProgress(current.progress, 0);
   emojiPickerTrigger.disabled = busy;
   emojiFile.disabled = busy;
+  westernSize.disabled = busy;
   for (const input of emojiOptions.querySelectorAll('input[name="emoji-mode"]')) {
     input.disabled = busy || input.dataset.available === "0";
   }
@@ -720,6 +737,7 @@ function setBusy(role, busy) {
 function setEmojiBusy(busy) {
   emojiPickerTrigger.disabled = busy;
   emojiFile.disabled = busy;
+  westernSize.disabled = busy;
   emojiProgress.classList.toggle("hidden", !busy);
   if (busy) setProgress(emojiProgress, 0);
   for (const input of emojiOptions.querySelectorAll('input[name="emoji-mode"]')) {
@@ -923,6 +941,31 @@ function renderRole(role, values) {
   current.type.textContent = t(variable ? "variableFont" : "staticFont");
 }
 
+function renderWesternSize(values) {
+  const size = normalizeWesternSize(values.western_scale);
+  westernSize.value = String(size);
+  westernSizeValue.textContent = `${size}%`;
+}
+
+async function applyWesternSize() {
+  const size = normalizeWesternSize(westernSize.value);
+  westernSize.value = String(size);
+  westernSizeValue.textContent = `${size}%`;
+  westernSize.disabled = true;
+  document.querySelector("#refresh-button").disabled = true;
+  try {
+    assertCommand(await exec(`${fontctl} western-size ${size}`), "western-size");
+    showMessage(t("latinSizeSaved", { size }));
+    await refreshStatus();
+  } catch (error) {
+    showMessage(formatFontError(error) || t("latinSizeError"));
+    await refreshStatus();
+  } finally {
+    westernSize.disabled = uploadInProgress;
+    document.querySelector("#refresh-button").disabled = uploadInProgress;
+  }
+}
+
 async function refreshStatus() {
   setIndeterminate(pageProgress, true);
   try {
@@ -935,6 +978,7 @@ async function refreshStatus() {
     bridgeChip.classList.remove("connection-error");
     renderRole("chinese", values);
     renderRole("western", values);
+    renderWesternSize(values);
     renderEmoji(values);
 
     const pending = values.pending_reboot === "1";
@@ -1010,6 +1054,10 @@ function initialize() {
     else refreshStatus();
   });
   emojiFile.addEventListener("cancel", refreshStatus);
+  westernSize.addEventListener("input", () => {
+    westernSizeValue.textContent = `${normalizeWesternSize(westernSize.value)}%`;
+  });
+  westernSize.addEventListener("change", applyWesternSize);
 
   document.querySelector("#back-button").addEventListener("click", () => {
     if (window.history.length > 1) window.history.back();

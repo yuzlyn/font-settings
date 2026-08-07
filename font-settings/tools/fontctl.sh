@@ -8,6 +8,7 @@ EMOJI_DIR="$MODDIR/emoji"
 EMOJI_MODE_FILE="$DATA_DIR/emoji.mode"
 EMOJI_TARGETS_FILE="$DATA_DIR/emoji.targets"
 EMOJI_CUSTOM_FILE="$DATA_DIR/emoji-custom.font"
+WESTERN_SIZE_FILE="$DATA_DIR/western.size"
 
 fail() {
   echo "error=$1"
@@ -44,6 +45,16 @@ role_paths() {
 read_flag() {
   value="$(cat "$1" 2>/dev/null)"
   [ "$value" = "1" ] || value=0
+  echo "$value"
+}
+
+read_percent() {
+  value="$(cat "$1" 2>/dev/null)"
+  case "$value" in
+    ''|*[!0-9]*) value=90 ;;
+  esac
+  [ "$value" -ge 80 ] 2>/dev/null || value=80
+  [ "$value" -le 110 ] 2>/dev/null || value=110
   echo "$value"
 }
 
@@ -230,6 +241,7 @@ print_status() {
   [ -f "$EMOJI_DIR/facebook/Facebook-Emoji.ttf" ] && echo "emoji_builtin_facebook=1" || echo "emoji_builtin_facebook=0"
   echo "western_targets=$(cat "$DATA_DIR/western.targets" 2>/dev/null)"
   echo "chinese_targets=$(cat "$DATA_DIR/chinese.targets" 2>/dev/null)"
+  echo "western_scale=$(read_percent "$WESTERN_SIZE_FILE")"
 
   [ -f "$DATA_DIR/pending_reboot" ] && echo "pending_reboot=1" || echo "pending_reboot=0"
 
@@ -312,11 +324,28 @@ abort_upload() {
   echo "ok=abort"
 }
 
+set_western_size() {
+  value="$1"
+  case "$value" in
+    ''|*[!0-9]*) fail "invalid_western_size" ;;
+  esac
+  [ "$value" -ge 80 ] 2>/dev/null || fail "invalid_western_size"
+  [ "$value" -le 110 ] 2>/dev/null || fail "invalid_western_size"
+  mkdir -p "$DATA_DIR" || fail "mkdir_failed"
+  printf '%s\n' "$value" > "$WESTERN_SIZE_FILE" || fail "western_size_save_failed"
+  chmod 0644 "$WESTERN_SIZE_FILE"
+  apply_config
+  touch "$DATA_DIR/pending_reboot"
+  sync
+  echo "ok=western-size"
+}
+
 case "$1" in
   status) print_status ;;
   begin) begin_upload "$2" "$3" ;;
   commit) commit_upload "$2" "$3" "$4" "$5" ;;
   abort) abort_upload "$2" ;;
+  western-size) set_western_size "$2" ;;
   emoji-set) apply_emoji "$2" ;;
   emoji-detect)
     target="$(detect_emoji_target)"
