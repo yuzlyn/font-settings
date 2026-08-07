@@ -22,10 +22,10 @@ read_flag() {
 read_percent() {
   value="$(cat "$1" 2>/dev/null)"
   case "$value" in
-    ''|*[!0-9]*) value=90 ;;
+    ''|*[!0-9]*) value=100 ;;
   esac
-  [ "$value" -ge 80 ] 2>/dev/null || value=80
-  [ "$value" -le 110 ] 2>/dev/null || value=110
+  [ "$value" -ge 20 ] 2>/dev/null || value=20
+  [ "$value" -le 100 ] 2>/dev/null || value=100
   echo "$value"
 }
 

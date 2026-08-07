@@ -17,7 +17,7 @@ cp -f "$SOURCE_DIR/font-settings/tools/fontconfig.sh" "$MODULE_DIR/tools/fontcon
 cp -f "$SOURCE_DIR/font-settings/tools/fontxml.awk" "$MODULE_DIR/tools/fontxml.awk"
 printf '1\n' > "$MODULE_DIR/data/chinese.variable"
 printf '1\n' > "$MODULE_DIR/data/western.variable"
-printf '90\n' > "$MODULE_DIR/data/western.size"
+printf '80\n' > "$MODULE_DIR/data/western.size"
 
 FONT_CONFIG_ROOT="$TEST_DIR/fontconfig-fixture" sh "$MODULE_DIR/tools/fontconfig.sh" prepare >/dev/null
 
@@ -35,7 +35,7 @@ grep -q 'NotoSansCJK-Regular.ttc' "$SYSTEM_OUTPUT"
 grep -q 'NotoColorEmoji.ttf' "$SYSTEM_OUTPUT"
 grep -q '<axis tag="wght" stylevalue="700"/>' "$SYSTEM_OUTPUT"
 grep -q 'FontSettingWestern.ttf' "$SYSTEM_OUTPUT"
-grep -q '<font[^>]* size="90">' "$SYSTEM_OUTPUT"
+grep -q 'size="80"' "$SYSTEM_OUTPUT"
 ! grep -q 'postScriptName="Roboto-Regular"' "$SYSTEM_OUTPUT"
 ! grep -q 'supportedAxes=' "$SYSTEM_OUTPUT"
 ! grep -q 'FontSettingChinese.ttf.*index=' "$SYSTEM_OUTPUT"

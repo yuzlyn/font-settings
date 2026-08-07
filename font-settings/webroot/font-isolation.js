@@ -409,6 +409,42 @@
     return sum;
   }
 
+  function scaleFont(input, fromPercent, toPercent) {
+    const source = asBytes(input);
+    const output = source.slice();
+    const view = new DataView(output.buffer, output.byteOffset, output.byteLength);
+    if (output.byteLength < 12 || !SFNT_SIGNATURES.has(view.getUint32(0, false))) fail("font_isolation_failed");
+    const tableCount = view.getUint16(4, false);
+    if (!tableCount || tableCount > 512 || 12 + tableCount * 16 > output.byteLength) fail("font_isolation_failed");
+
+    let headOffset = -1;
+    let headLength = 0;
+    let headRecord = -1;
+    for (let index = 0; index < tableCount; index += 1) {
+      const recordOffset = 12 + index * 16;
+      const offset = view.getUint32(recordOffset + 8, false);
+      const length = view.getUint32(recordOffset + 12, false);
+      if (offset > output.byteLength || length > output.byteLength - offset) fail("font_isolation_failed");
+      if (readTag(view, recordOffset) === "head") {
+        headOffset = offset;
+        headLength = length;
+        headRecord = recordOffset;
+      }
+    }
+    if (headOffset < 0 || headLength < 20) fail("font_isolation_failed");
+
+    const from = Math.max(1, Number(fromPercent) || 100);
+    const to = Math.max(1, Number(toPercent) || 100);
+    const currentUnits = view.getUint16(headOffset + 18, false);
+    const originalUnits = Math.max(16, Math.round((currentUnits * from) / 100));
+    const nextUnits = Math.max(16, Math.min(16384, Math.round((originalUnits * 100) / to)));
+    view.setUint32(headOffset + 8, 0, false);
+    view.setUint16(headOffset + 18, nextUnits, false);
+    view.setUint32(headRecord + 4, checksum(output.slice(headOffset, headOffset + headLength)), false);
+    view.setUint32(headOffset + 8, (0xb1b0afba - checksum(output)) >>> 0, false);
+    return output;
+  }
+
   function rebuildSfnt(source, role) {
     const { tables } = parseSfnt(source);
     const cmap = tables.find((table) => table.tag === "cmap");
@@ -449,5 +485,5 @@
     return rebuildSfnt(asBytes(input), role);
   }
 
-  return { CJK_RANGES, LATIN_RANGES, isolateFont, shouldRemove };
+  return { CJK_RANGES, LATIN_RANGES, isolateFont, scaleFont, shouldRemove };
 });

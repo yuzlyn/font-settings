@@ -405,6 +405,7 @@ let uploadInProgress = false;
 let currentEmojiMode = "default";
 let titleAnimationFrame = 0;
 let monetSeedRequest = null;
+let latestStatus = {};
 
 function exec(command, options = {}) {
   return new Promise((resolve, reject) => {
@@ -415,7 +416,8 @@ function exec(command, options = {}) {
 
     const callbackName = `font_setting_exec_${Date.now()}_${callbackSequence++}`;
     let settled = false;
-    const timeout = window.setTimeout(() => finish(new Error("KSU_BRIDGE_TIMEOUT")), 30000);
+    const timeoutMs = Math.max(1000, Number(options.timeout) || 30000);
+    const timeout = window.setTimeout(() => finish(new Error("KSU_BRIDGE_TIMEOUT")), timeoutMs);
 
     function finish(error, output = "") {
       if (settled) return;
@@ -538,6 +540,11 @@ function base64ToUtf8(value) {
   }
 }
 
+function base64ToBytes(value) {
+  const binary = atob(String(value || "").replace(/\s+/g, ""));
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+
 function formatBytes(bytes) {
   const size = Number(bytes) || 0;
   if (size < 1024) return `${numberFormatter.format(size)} B`;
@@ -546,8 +553,8 @@ function formatBytes(bytes) {
 }
 
 function normalizeWesternSize(value) {
-  const size = Math.round(Number(value) || 90);
-  return Math.max(80, Math.min(110, size));
+  const size = Math.round(Number(value) || 100);
+  return Math.max(20, Math.min(100, size));
 }
 
 function showMessage(message) {
@@ -757,6 +764,17 @@ async function appendChunk(role, bytes) {
   }
 }
 
+async function uploadRoleBytes(role, bytes, variable, name) {
+  assertCommand(await exec(`${fontctl} begin ${role} ${bytes.byteLength}`), "begin");
+  for (let offset = 0; offset < bytes.byteLength; offset += CHUNK_SIZE) {
+    const end = Math.min(offset + CHUNK_SIZE, bytes.byteLength);
+    await appendChunk(role, bytes.subarray(offset, end));
+    setProgress(roles[role].progress, end / bytes.byteLength);
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+  }
+  assertCommand(await exec(`${fontctl} commit ${role} ${bytes.byteLength} ${variable} ${name}`), "commit");
+}
+
 async function uploadFont(role, file) {
   if (uploadInProgress) return;
   uploadInProgress = true;
@@ -768,20 +786,16 @@ async function uploadFont(role, file) {
     const info = await inspectFont(file);
     if (!window.FontRoleIsolation) throw new Error("font_isolation_failed");
     const source = new Uint8Array(await file.arrayBuffer());
-    const isolated = window.FontRoleIsolation.isolateFont(source, role);
-    assertCommand(await exec(`${fontctl} begin ${role} ${isolated.byteLength}`), "begin");
-
-    for (let offset = 0; offset < isolated.byteLength; offset += CHUNK_SIZE) {
-      const end = Math.min(offset + CHUNK_SIZE, isolated.byteLength);
-      const bytes = isolated.subarray(offset, end);
-      await appendChunk(role, bytes);
-      setProgress(current.progress, end / isolated.byteLength);
-      await new Promise((resolve) => requestAnimationFrame(resolve));
+    let isolated = window.FontRoleIsolation.isolateFont(source, role);
+    if (role === "western") {
+      isolated = window.FontRoleIsolation.scaleFont(isolated, 100, normalizeWesternSize(westernSize.value));
     }
-
     const variable = info.variableWeight ? 1 : 0;
     const name = utf8ToBase64(file.name);
-    assertCommand(await exec(`${fontctl} commit ${role} ${isolated.byteLength} ${variable} ${name}`), "commit");
+    await uploadRoleBytes(role, isolated, variable, name);
+    if (role === "western") {
+      assertCommand(await exec(`${fontctl} western-size ${normalizeWesternSize(westernSize.value)}`), "western-size");
+    }
     showMessage(t("roleFontSaved", { role: t(role === "chinese" ? "chineseRole" : "latinRole") }));
     await refreshStatus();
   } catch (error) {
@@ -949,11 +963,24 @@ function renderWesternSize(values) {
 
 async function applyWesternSize() {
   const size = normalizeWesternSize(westernSize.value);
+  const previousSize = normalizeWesternSize(latestStatus.western_scale);
   westernSize.value = String(size);
   westernSizeValue.textContent = `${size}%`;
   westernSize.disabled = true;
   document.querySelector("#refresh-button").disabled = true;
   try {
+    if (!window.FontRoleIsolation || typeof window.FontRoleIsolation.scaleFont !== "function") {
+      throw new Error("font_isolation_failed");
+    }
+    const encoded = await exec(`base64 '${moduleDir}/system/fonts/FontSettingWestern.ttf'`, { timeout: 60000 });
+    const current = base64ToBytes(encoded);
+    const scaled = window.FontRoleIsolation.scaleFont(current, previousSize, size);
+    await uploadRoleBytes(
+      "western",
+      scaled,
+      latestStatus.western_variable === "1" ? 1 : 0,
+      latestStatus.western_name_b64 || utf8ToBase64("FontSettingWestern.ttf"),
+    );
     assertCommand(await exec(`${fontctl} western-size ${size}`), "western-size");
     showMessage(t("latinSizeSaved", { size }));
     await refreshStatus();
@@ -972,6 +999,7 @@ async function refreshStatus() {
     await resolveModuleDir();
     const values = parseProperties(await exec(`${fontctl} status`));
     if (values.module !== "ok") throw new Error("status_failed");
+    latestStatus = values;
 
     bridgeLabel.textContent = t("kernelSUConnected");
     bridgeChip.classList.add("connected");
