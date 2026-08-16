@@ -6,12 +6,12 @@
     <meta name="color-scheme" content="light dark">
     <title>Font settings</title>
     <link rel="stylesheet" href="vendor/mdui.css">
-    <link rel="stylesheet" href="styles.css?v=227-lite-package">
+    <link rel="stylesheet" href="styles.css?v=230">
     <script src="vendor/mdui.global.js"></script>
     <script src="vendor/material-kolor.js"></script>
-    <script src="theme-cache.js?v=227-lite-package"></script>
-    <script src="font-isolation.js?v=227-lite-package" defer></script>
-    <script src="app.js?v=227-lite-package" defer></script>
+    <script src="theme-cache.js?v=230"></script>
+    <script src="font-isolation.js?v=230" defer></script>
+    <script src="app.js?v=230" defer></script>
   </head>
   <body>
     <mdui-top-app-bar variant="small" scroll-behavior="elevate">
@@ -83,12 +83,11 @@
             <div class="leading-icon" aria-hidden="true"><span>文</span></div>
             <div class="item-copy">
               <h2 data-i18n="chineseFont">Chinese font</h2>
-              <p id="chinese-name" class="font-name" data-i18n="loading">Loading</p>
-              <p id="chinese-meta" class="font-meta">--</p>
+              <p id="chinese-count" class="font-name" data-i18n="loading">Loading</p>
             </div>
-            <mdui-chip id="chinese-type" variant="filter" class="type-chip" data-i18n="loading">Loading</mdui-chip>
-            <mdui-button id="chinese-upload" variant="tonal" class="select-button" data-i18n="chooseChineseTtf">Choose Chinese TTF</mdui-button>
+            <mdui-button id="chinese-upload" variant="tonal" class="select-button" data-i18n="addFont">Add font</mdui-button>
           </div>
+          <div id="chinese-chain" class="font-chain" aria-live="polite"></div>
           <mdui-linear-progress id="chinese-progress" class="font-progress hidden" value="0" role="progressbar" aria-label="Uploading Chinese font" data-i18n-aria-label="uploadingChineseFont" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></mdui-linear-progress>
           <input id="chinese-file" type="file" accept=".ttf,font/ttf" hidden>
         </mdui-card>
@@ -100,12 +99,11 @@
             </div>
             <div class="item-copy">
               <h2 data-i18n="latinFont">Latin font</h2>
-              <p id="western-name" class="font-name" data-i18n="loading">Loading</p>
-              <p id="western-meta" class="font-meta">--</p>
+              <p id="western-count" class="font-name" data-i18n="loading">Loading</p>
             </div>
-            <mdui-chip id="western-type" variant="filter" class="type-chip" data-i18n="loading">Loading</mdui-chip>
-            <mdui-button id="western-upload" variant="tonal" class="select-button" data-i18n="chooseLatinTtf">Choose Latin TTF</mdui-button>
+            <mdui-button id="western-upload" variant="tonal" class="select-button" data-i18n="addFont">Add font</mdui-button>
           </div>
+          <div id="western-chain" class="font-chain" aria-live="polite"></div>
           <div class="font-size-control">
             <div class="font-size-copy">
               <span data-i18n="latinSize">西文字号</span>
@@ -115,6 +113,21 @@
           </div>
           <mdui-linear-progress id="western-progress" class="font-progress hidden" value="0" role="progressbar" aria-label="Uploading Latin font" data-i18n-aria-label="uploadingLatinFont" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></mdui-linear-progress>
           <input id="western-file" type="file" accept=".ttf,font/ttf" hidden>
+        </mdui-card>
+      </section>
+
+      <section class="fallback-settings" aria-labelledby="fallback-heading">
+        <mdui-card variant="filled" class="fallback-card">
+          <div class="fallback-row">
+            <div class="leading-icon fallback-icon" aria-hidden="true">
+              <svg class="ui-icon" viewBox="0 0 24 24"><path d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3ZM9 3 5 6.99h3V14h2V6.99h3L9 3Z"></path></svg>
+            </div>
+            <div class="item-copy">
+              <h2 id="fallback-heading" data-i18n="fallbackLabel">Glyph fallback</h2>
+              <p id="fallback-status" class="font-meta" data-i18n="fallbackDescription">Fall back to system fonts for missing glyphs</p>
+            </div>
+            <mdui-switch id="fallback-switch" aria-label="Glyph fallback" data-i18n-aria-label="fallbackLabel"></mdui-switch>
+          </div>
         </mdui-card>
       </section>
 

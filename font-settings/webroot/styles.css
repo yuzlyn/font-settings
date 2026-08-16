@@ -222,6 +222,7 @@ h2 {
 
 .font-card,
 .emoji-card,
+.fallback-card,
 .system-card,
 .message-card {
   --shape-corner: var(--card-shape);
@@ -235,6 +236,35 @@ h2 {
 
 .emoji-settings {
   margin-top: 16px;
+}
+
+.fallback-settings {
+  margin-top: 16px;
+}
+
+.fallback-row {
+  display: flex;
+  align-items: center;
+  min-height: 88px;
+  gap: 16px;
+  padding: 20px 24px;
+  border-radius: var(--card-shape);
+  background: rgb(var(--mdui-color-surface-container-low));
+}
+
+.fallback-row .fallback-icon {
+  flex: 0 0 auto;
+  background: rgb(var(--mdui-color-primary-container));
+  color: rgb(var(--mdui-color-on-primary-container));
+}
+
+.fallback-row .item-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+#fallback-switch {
+  flex: 0 0 auto;
 }
 
 .emoji-heading-row {
@@ -511,6 +541,94 @@ h2 {
   justify-self: end;
   background-color: rgb(var(--mdui-color-primary-container));
   color: rgb(var(--mdui-color-on-primary-container));
+}
+
+.font-chain {
+  display: grid;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+
+.font-chain:empty {
+  padding-bottom: 12px;
+}
+
+.chain-row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 16px;
+  background: rgb(var(--mdui-color-surface-container-high));
+  position: relative;
+  transition: box-shadow 160ms ease-out, opacity 160ms ease-out;
+}
+
+.chain-drag {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: rgb(var(--mdui-color-on-surface-variant));
+  cursor: grab;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.chain-drag .ui-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.chain-drag:active {
+  cursor: grabbing;
+}
+
+.chain-row.chain-dragging {
+  opacity: 0.92;
+  z-index: 1000;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+}
+
+.chain-copy {
+  min-width: 0;
+}
+
+.chain-copy strong,
+.chain-copy small {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  letter-spacing: 0;
+}
+
+.chain-copy strong {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.chain-copy small {
+  margin-top: 1px;
+  color: rgb(var(--mdui-color-on-surface-variant));
+  font-size: 12px;
+  line-height: 17px;
+}
+
+.chain-row > mdui-button-icon {
+  color: rgb(var(--mdui-color-on-surface-variant));
+}
+
+.chain-row > mdui-button-icon[disabled]:not([disabled="false"]) {
+  opacity: 0.32;
+  pointer-events: none;
 }
 
 .page-progress {

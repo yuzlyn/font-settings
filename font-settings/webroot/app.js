@@ -72,6 +72,23 @@ const TRANSLATIONS = {
     roleFontSaved: "{role}字体已保存",
     latinSizeSaved: "西文字号已设为 {size}%",
     latinSizeError: "西文字号设置失败",
+    fallbackLabel: "缺字回退",
+    fallbackDescription: "上传字体缺少的字形自动回退到系统字体",
+    fallbackOnDetail: "已开启：缺少的字形将使用系统字体补充",
+    fallbackOffDetail: "已关闭：仅使用上传字体",
+    fallbackEnabled: "开启",
+    fallbackDisabled: "关闭",
+    fallbackSaved: "缺字回退已{status}",
+    fallbackFailed: "缺字回退设置失败",
+    addFont: "添加字体",
+    fontCountUnit: "个字体",
+    fontRemoved: "字体已移除",
+    moveUp: "上移",
+    moveDown: "下移",
+    removeFontLabel: "移除",
+    dragToReorder: "拖拽排序",
+    tooManyFonts: "字体数量已达上限（8 个）",
+    chainFailed: "字体链操作失败",
     chineseRole: "中文",
     latinRole: "西文",
     uploadFailed: "上传失败",
@@ -174,6 +191,23 @@ const TRANSLATIONS = {
     roleFontSaved: "{role}字型已儲存",
     latinSizeSaved: "西文字號已設為 {size}%",
     latinSizeError: "西文字號設定失敗",
+    fallbackLabel: "缺字回退",
+    fallbackDescription: "上傳字型缺少的字元自動回退到系統字型",
+    fallbackOnDetail: "已開啟：缺少的字元將使用系統字型補充",
+    fallbackOffDetail: "已關閉：僅使用上傳字型",
+    fallbackEnabled: "開啟",
+    fallbackDisabled: "關閉",
+    fallbackSaved: "缺字回退已{status}",
+    fallbackFailed: "缺字回退設定失敗",
+    addFont: "加入字型",
+    fontCountUnit: "個字型",
+    fontRemoved: "字型已移除",
+    moveUp: "上移",
+    moveDown: "下移",
+    removeFontLabel: "移除",
+    dragToReorder: "拖曳排序",
+    tooManyFonts: "字型數量已達上限（8 個）",
+    chainFailed: "字型鏈操作失敗",
     chineseRole: "中文",
     latinRole: "西文",
     uploadFailed: "上傳失敗",
@@ -276,6 +310,23 @@ const TRANSLATIONS = {
     roleFontSaved: "{role} font saved",
     latinSizeSaved: "Latin size set to {size}%",
     latinSizeError: "Could not set Latin size",
+    fallbackLabel: "Glyph fallback",
+    fallbackDescription: "Fall back to system fonts for glyphs missing from the uploaded font",
+    fallbackOnDetail: "On: missing glyphs are filled by system fonts",
+    fallbackOffDetail: "Off: use uploaded fonts only",
+    fallbackEnabled: "enabled",
+    fallbackDisabled: "disabled",
+    fallbackSaved: "Glyph fallback {status}",
+    fallbackFailed: "Could not update glyph fallback",
+    addFont: "Add font",
+    fontCountUnit: "fonts",
+    fontRemoved: "Font removed",
+    moveUp: "Move up",
+    moveDown: "Move down",
+    removeFontLabel: "Remove",
+    dragToReorder: "Drag to reorder",
+    tooManyFonts: "Font limit reached (8)",
+    chainFailed: "Could not update the font chain",
     chineseRole: "Chinese",
     latinRole: "Latin",
     uploadFailed: "Upload failed",
@@ -367,18 +418,16 @@ const roles = {
   chinese: {
     fileInput: document.querySelector("#chinese-file"),
     button: document.querySelector("#chinese-upload"),
-    name: document.querySelector("#chinese-name"),
-    meta: document.querySelector("#chinese-meta"),
-    type: document.querySelector("#chinese-type"),
     progress: document.querySelector("#chinese-progress"),
+    chain: document.querySelector("#chinese-chain"),
+    count: document.querySelector("#chinese-count"),
   },
   western: {
     fileInput: document.querySelector("#western-file"),
     button: document.querySelector("#western-upload"),
-    name: document.querySelector("#western-name"),
-    meta: document.querySelector("#western-meta"),
-    type: document.querySelector("#western-type"),
     progress: document.querySelector("#western-progress"),
+    chain: document.querySelector("#western-chain"),
+    count: document.querySelector("#western-count"),
   },
 };
 
@@ -397,6 +446,8 @@ const emojiFile = document.querySelector("#emoji-file");
 const emojiProgress = document.querySelector("#emoji-progress");
 const westernSize = document.querySelector("#western-size");
 const westernSizeValue = document.querySelector("#western-size-value");
+const fallbackSwitch = document.querySelector("#fallback-switch");
+const fallbackStatus = document.querySelector("#fallback-status");
 const topAppBar = document.querySelector("mdui-top-app-bar");
 const compactTitle = document.querySelector("#compact-title");
 const largeTitle = document.querySelector(".large-title");
@@ -406,6 +457,31 @@ let currentEmojiMode = "default";
 let titleAnimationFrame = 0;
 let monetSeedRequest = null;
 let latestStatus = {};
+let latestChains = { chinese: [], western: [] };
+
+const CHAIN_ICONS = {
+  grip: '<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h6V4H9v2Zm0 7h6v-2H9v2Zm0 7h6v-2H9v2Z"></path></svg>',
+  remove: '<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12ZM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4Z"></path></svg>',
+};
+
+function chainIconButton(icon, labelKey, onClick) {
+  const button = document.createElement("mdui-button-icon");
+  button.className = "chain-action";
+  button.setAttribute("aria-label", t(labelKey));
+  button.title = t(labelKey);
+  button.innerHTML = CHAIN_ICONS[icon];
+  button.addEventListener("click", onClick);
+  return button;
+}
+
+function setChainButtonsDisabled(disabled) {
+  for (const button of document.querySelectorAll(".chain-row .chain-action")) {
+    button.disabled = disabled;
+  }
+  for (const handle of document.querySelectorAll(".chain-row .chain-drag")) {
+    handle.disabled = disabled;
+  }
+}
 
 function exec(command, options = {}) {
   return new Promise((resolve, reject) => {
@@ -734,6 +810,8 @@ function setBusy(role, busy) {
   emojiPickerTrigger.disabled = busy;
   emojiFile.disabled = busy;
   westernSize.disabled = busy;
+  fallbackSwitch.disabled = busy;
+  setChainButtonsDisabled(busy);
   for (const input of emojiOptions.querySelectorAll('input[name="emoji-mode"]')) {
     input.disabled = busy || input.dataset.available === "0";
   }
@@ -745,6 +823,8 @@ function setEmojiBusy(busy) {
   emojiPickerTrigger.disabled = busy;
   emojiFile.disabled = busy;
   westernSize.disabled = busy;
+  fallbackSwitch.disabled = busy;
+  setChainButtonsDisabled(busy);
   emojiProgress.classList.toggle("hidden", !busy);
   if (busy) setProgress(emojiProgress, 0);
   for (const input of emojiOptions.querySelectorAll('input[name="emoji-mode"]')) {
@@ -764,7 +844,7 @@ async function appendChunk(role, bytes) {
   }
 }
 
-async function uploadRoleBytes(role, bytes, variable, name) {
+async function uploadRoleBytes(role, bytes, variable, name, slotName) {
   assertCommand(await exec(`${fontctl} begin ${role} ${bytes.byteLength}`), "begin");
   for (let offset = 0; offset < bytes.byteLength; offset += CHUNK_SIZE) {
     const end = Math.min(offset + CHUNK_SIZE, bytes.byteLength);
@@ -772,7 +852,10 @@ async function uploadRoleBytes(role, bytes, variable, name) {
     setProgress(roles[role].progress, end / bytes.byteLength);
     await new Promise((resolve) => requestAnimationFrame(resolve));
   }
-  assertCommand(await exec(`${fontctl} commit ${role} ${bytes.byteLength} ${variable} ${name}`), "commit");
+  const finish = slotName
+    ? `${fontctl} replace ${role} ${slotName} ${bytes.byteLength} ${variable} ${name}`
+    : `${fontctl} commit ${role} ${bytes.byteLength} ${variable} ${name}`;
+  assertCommand(await exec(finish), slotName ? "replace" : "commit");
 }
 
 async function uploadFont(role, file) {
@@ -863,6 +946,14 @@ function formatFontError(error) {
     font_cmap_unsupported: t("fontCmapUnsupported"),
     font_cmap_too_large: t("fontCmapTooLarge"),
     font_isolation_failed: t("fontIsolationFailed"),
+    invalid_fallback: t("fallbackFailed"),
+    fallback_save_failed: t("fallbackFailed"),
+    too_many_fonts: t("tooManyFonts"),
+    invalid_font_name: t("chainFailed"),
+    font_not_found: t("chainFailed"),
+    reorder_mismatch: t("chainFailed"),
+    chain_save_failed: t("chainFailed"),
+    invalid_role: t("chainFailed"),
   };
   return messages[message] || message || t("uploadFailed");
 }
@@ -946,13 +1037,157 @@ async function applyEmojiMode(mode) {
   }
 }
 
-function renderRole(role, values) {
+function collectChain(role, values) {
+  const count = Number(values[`${role}_font_count`]) || 0;
+  const chain = [];
+  for (let index = 1; index <= count; index += 1) {
+    const name = values[`${role}_font_${index}`];
+    if (!name) continue;
+    chain.push({
+      name,
+      nameB64: values[`${role}_font_${index}_name_b64`] || "",
+      size: Number(values[`${role}_font_${index}_size`]) || 0,
+      variable: values[`${role}_font_${index}_variable`] === "1",
+      displayName: base64ToUtf8(values[`${role}_font_${index}_name_b64`]),
+    });
+  }
+  return chain;
+}
+
+function renderChainRow(role, font, index, total) {
+  const row = document.createElement("div");
+  row.className = "chain-row";
+  row.dataset.name = font.name;
+  row.dataset.index = String(index);
+
+  const handle = document.createElement("button");
+  handle.type = "button";
+  handle.className = "chain-drag";
+  handle.setAttribute("aria-label", t("dragToReorder"));
+  handle.title = t("dragToReorder");
+  handle.innerHTML = CHAIN_ICONS.grip;
+  handle.addEventListener("pointerdown", (event) => startChainDrag(event, role, index, row));
+
+  const copy = document.createElement("div");
+  copy.className = "chain-copy";
+  const name = document.createElement("strong");
+  name.className = "chain-name";
+  name.textContent = font.displayName || t("unknownFont");
+  const meta = document.createElement("small");
+  meta.className = "chain-meta";
+  meta.textContent = `#${index + 1} · ${formatBytes(font.size)} · ${t(font.variable ? "variableFont" : "staticFont")}`;
+  copy.append(name, meta);
+
+  const remove = chainIconButton("remove", "removeFontLabel", () => removeFont(role, font.name));
+
+  row.append(handle, copy, remove);
+  return row;
+}
+
+function renderChain(role, values) {
   const current = roles[role];
-  const size = Number(values[`${role}_size`]) || 0;
-  const variable = values[`${role}_variable`] === "1";
-  current.name.textContent = base64ToUtf8(values[`${role}_name_b64`]);
-  current.meta.textContent = size > 0 ? formatBytes(size) : t("fontFileMissing");
-  current.type.textContent = t(variable ? "variableFont" : "staticFont");
+  const chain = collectChain(role, values);
+  latestChains[role] = chain;
+  current.count.textContent = chain.length ? `${chain.length} ${t("fontCountUnit")}` : t("fontFileMissing");
+  current.chain.textContent = "";
+  chain.forEach((font, index) => {
+    current.chain.append(renderChainRow(role, font, index, chain.length));
+  });
+}
+
+async function removeFont(role, name) {
+  if (uploadInProgress) return;
+  uploadInProgress = true;
+  setBusy(role, true);
+  try {
+    assertCommand(await exec(`${fontctl} remove ${role} ${name}`), "remove");
+    showMessage(t("fontRemoved"));
+    await refreshStatus();
+  } catch (error) {
+    showMessage(formatFontError(error));
+    await refreshStatus();
+  } finally {
+    uploadInProgress = false;
+    setBusy(role, false);
+  }
+}
+
+let dragState = null;
+
+function startChainDrag(event, role, index, row) {
+  if (uploadInProgress) return;
+  if (event.pointerType === "mouse" && event.button !== 0) return;
+  const rect = row.getBoundingClientRect();
+  dragState = {
+    role,
+    index,
+    row,
+    pointerId: event.pointerId,
+    grabOffsetY: event.clientY - rect.top,
+    originalTop: rect.top,
+    height: rect.height,
+  };
+  row.classList.add("chain-dragging");
+  event.currentTarget.setPointerCapture(event.pointerId);
+  event.preventDefault();
+}
+
+function moveChainDrag(event) {
+  if (!dragState || event.pointerId !== dragState.pointerId) return;
+  const dy = event.clientY - dragState.grabOffsetY - dragState.originalTop;
+  dragState.row.style.transform = `translateY(${dy}px)`;
+}
+
+function targetIndexAt(role, centerY, excludeRow) {
+  const container = roles[role].chain;
+  const rows = [...container.querySelectorAll(".chain-row")].filter((row) => row !== excludeRow);
+  let target = 0;
+  for (const row of rows) {
+    const rect = row.getBoundingClientRect();
+    if (centerY > rect.top + rect.height / 2) target += 1;
+  }
+  return target;
+}
+
+async function endChainDrag(event) {
+  if (!dragState || event.pointerId !== dragState.pointerId) return;
+  const { role, index, row } = dragState;
+  const centerY = event.clientY - dragState.grabOffsetY + dragState.height / 2;
+  row.style.transform = "";
+  row.classList.remove("chain-dragging");
+  dragState = null;
+
+  const target = targetIndexAt(role, centerY, row);
+  if (target === index) return;
+
+  const chain = (latestChains[role] || []).slice();
+  const [item] = chain.splice(index, 1);
+  chain.splice(target, 0, item);
+  await reorderChain(role, chain);
+}
+
+function cancelChainDrag(event) {
+  if (!dragState || event.pointerId !== dragState.pointerId) return;
+  dragState.row.style.transform = "";
+  dragState.row.classList.remove("chain-dragging");
+  dragState = null;
+}
+
+async function reorderChain(role, reordered) {
+  if (uploadInProgress) return;
+  const names = reordered.map((font) => font.name).join(" ");
+  uploadInProgress = true;
+  setBusy(role, true);
+  try {
+    assertCommand(await exec(`${fontctl} reorder ${role} ${names}`), "reorder");
+    await refreshStatus();
+  } catch (error) {
+    showMessage(formatFontError(error));
+    await refreshStatus();
+  } finally {
+    uploadInProgress = false;
+    setBusy(role, false);
+  }
 }
 
 function renderWesternSize(values) {
@@ -961,9 +1196,22 @@ function renderWesternSize(values) {
   westernSizeValue.textContent = `${size}%`;
 }
 
+function renderFallback(values) {
+  const enabled = values.fallback === "1";
+  fallbackSwitch.checked = enabled;
+  fallbackStatus.textContent = t(enabled ? "fallbackOnDetail" : "fallbackOffDetail");
+}
+
 async function applyWesternSize() {
   const size = normalizeWesternSize(westernSize.value);
   const previousSize = normalizeWesternSize(latestStatus.western_scale);
+  const primary = latestChains.western[0];
+  if (!primary) {
+    westernSize.value = String(previousSize);
+    westernSizeValue.textContent = `${previousSize}%`;
+    showMessage(t("latinSizeError"));
+    return;
+  }
   westernSize.value = String(size);
   westernSizeValue.textContent = `${size}%`;
   westernSize.disabled = true;
@@ -972,14 +1220,15 @@ async function applyWesternSize() {
     if (!window.FontRoleIsolation || typeof window.FontRoleIsolation.scaleFont !== "function") {
       throw new Error("font_isolation_failed");
     }
-    const encoded = await exec(`base64 '${moduleDir}/system/fonts/FontSettingWestern.ttf'`, { timeout: 60000 });
+    const encoded = await exec(`base64 '${moduleDir}/system/fonts/${primary.name}'`, { timeout: 60000 });
     const current = base64ToBytes(encoded);
     const scaled = window.FontRoleIsolation.scaleFont(current, previousSize, size);
     await uploadRoleBytes(
       "western",
       scaled,
-      latestStatus.western_variable === "1" ? 1 : 0,
-      latestStatus.western_name_b64 || utf8ToBase64("FontSettingWestern.ttf"),
+      primary.variable ? 1 : 0,
+      primary.nameB64 || utf8ToBase64(primary.name),
+      primary.name,
     );
     assertCommand(await exec(`${fontctl} western-size ${size}`), "western-size");
     showMessage(t("latinSizeSaved", { size }));
@@ -990,6 +1239,25 @@ async function applyWesternSize() {
   } finally {
     westernSize.disabled = uploadInProgress;
     document.querySelector("#refresh-button").disabled = uploadInProgress;
+  }
+}
+
+async function applyFallback(enabled) {
+  if (uploadInProgress) return;
+  uploadInProgress = true;
+  fallbackSwitch.disabled = true;
+  document.querySelector("#refresh-button").disabled = true;
+  try {
+    assertCommand(await exec(`${fontctl} fallback-set ${enabled ? 1 : 0}`), "fallback");
+    showMessage(t("fallbackSaved", { status: t(enabled ? "fallbackEnabled" : "fallbackDisabled") }));
+    await refreshStatus();
+  } catch (error) {
+    showMessage(formatFontError(error) || t("fallbackFailed"));
+    await refreshStatus();
+  } finally {
+    uploadInProgress = false;
+    fallbackSwitch.disabled = false;
+    document.querySelector("#refresh-button").disabled = false;
   }
 }
 
@@ -1004,9 +1272,10 @@ async function refreshStatus() {
     bridgeLabel.textContent = t("kernelSUConnected");
     bridgeChip.classList.add("connected");
     bridgeChip.classList.remove("connection-error");
-    renderRole("chinese", values);
-    renderRole("western", values);
+    renderChain("chinese", values);
+    renderChain("western", values);
     renderWesternSize(values);
+    renderFallback(values);
     renderEmoji(values);
 
     const pending = values.pending_reboot === "1";
@@ -1086,6 +1355,10 @@ function initialize() {
     westernSizeValue.textContent = `${normalizeWesternSize(westernSize.value)}%`;
   });
   westernSize.addEventListener("change", applyWesternSize);
+  fallbackSwitch.addEventListener("change", () => applyFallback(fallbackSwitch.checked));
+  document.addEventListener("pointermove", moveChainDrag);
+  document.addEventListener("pointerup", endChainDrag);
+  document.addEventListener("pointercancel", cancelChainDrag);
 
   document.querySelector("#back-button").addEventListener("click", () => {
     if (window.history.length > 1) window.history.back();

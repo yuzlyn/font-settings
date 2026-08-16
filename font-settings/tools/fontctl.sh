@@ -9,6 +9,7 @@ EMOJI_MODE_FILE="$DATA_DIR/emoji.mode"
 EMOJI_TARGETS_FILE="$DATA_DIR/emoji.targets"
 EMOJI_CUSTOM_FILE="$DATA_DIR/emoji-custom.font"
 WESTERN_SIZE_FILE="$DATA_DIR/western.size"
+FALLBACK_FILE="$DATA_DIR/fallback"
 
 fail() {
   echo "error=$1"
@@ -18,17 +19,13 @@ fail() {
 role_paths() {
   case "$1" in
     chinese)
-      TARGET_FILE="$SYSTEM_FONT_DIR/FontSettingChinese.ttf"
-      ROLE_FILE="$TARGET_FILE"
-      NAME_FILE="$DATA_DIR/chinese.name.b64"
-      VARIABLE_FILE="$DATA_DIR/chinese.variable"
+      ROLE_PREFIX="FontSettingChinese"
+      LIST_FILE="$DATA_DIR/chinese.list"
       TEMP_FILE="$DATA_DIR/.chinese.upload"
       ;;
     western)
-      TARGET_FILE="$SYSTEM_FONT_DIR/FontSettingWestern.ttf"
-      ROLE_FILE="$TARGET_FILE"
-      NAME_FILE="$DATA_DIR/western.name.b64"
-      VARIABLE_FILE="$DATA_DIR/western.variable"
+      ROLE_PREFIX="FontSettingWestern"
+      LIST_FILE="$DATA_DIR/western.list"
       TEMP_FILE="$DATA_DIR/.western.upload"
       ;;
     emoji)
@@ -40,6 +37,83 @@ role_paths() {
       ;;
     *) fail "invalid_role" ;;
   esac
+}
+
+valid_font_slot() {
+  role="$1"
+  name="$2"
+  [ -n "$name" ] || return 1
+  case "$name" in
+    */*|*[!A-Za-z0-9._-]*) return 1 ;;
+  esac
+  case "$role:$name" in
+    chinese:FontSettingChinese.ttf) return 0 ;;
+    chinese:FontSettingChinese-[0-9]*.ttf) return 0 ;;
+    western:FontSettingWestern.ttf) return 0 ;;
+    western:FontSettingWestern-[0-9]*.ttf) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Create the ordered chain list from the legacy single-font slot on first run.
+migrate_role() {
+  role="$1"
+  case "$role" in chinese|western) ;; *) return 0 ;; esac
+  role_paths "$role"
+  [ -s "$LIST_FILE" ] && return 0
+
+  legacy="FontSettingChinese.ttf"
+  [ "$role" = western ] && legacy="FontSettingWestern.ttf"
+
+  mkdir -p "$DATA_DIR" || fail "mkdir_failed"
+  if [ -f "$SYSTEM_FONT_DIR/$legacy" ]; then
+    var="$(read_flag "$DATA_DIR/$role.variable")"
+    name="$(cat "$DATA_DIR/$role.name.b64" 2>/dev/null)"
+    if [ -z "$name" ]; then
+      name="$(printf '%s' "$legacy" | base64 | tr -d '\n')"
+    fi
+    printf '%s %s %s\n' "$legacy" "$var" "$name" > "$LIST_FILE" || fail "chain_save_failed"
+  else
+    : > "$LIST_FILE" || fail "chain_save_failed"
+  fi
+  chmod 0644 "$LIST_FILE"
+}
+
+next_slot() {
+  role="$1"
+  role_paths "$role"
+  n=1
+  while [ "$n" -le 8 ]; do
+    candidate="${ROLE_PREFIX}-${n}.ttf"
+    [ -e "$SYSTEM_FONT_DIR/$candidate" ] || { echo "$candidate"; return 0; }
+    n=$((n + 1))
+  done
+  return 1
+}
+
+print_role_chain() {
+  role="$1"
+  role_paths "$role"
+  migrate_role "$role"
+  count=0
+  if [ -s "$LIST_FILE" ]; then
+    while IFS= read -r entry; do
+      set -- $entry
+      name="$1"
+      var="$2"
+      nameb64="$3"
+      valid_font_slot "$role" "$name" || continue
+      case "$var" in 0|1) ;; *) var=0 ;; esac
+      size=0
+      [ -f "$SYSTEM_FONT_DIR/$name" ] && size="$(stat -c %s "$SYSTEM_FONT_DIR/$name" 2>/dev/null)"
+      count=$((count + 1))
+      echo "${role}_font_${count}=$name"
+      echo "${role}_font_${count}_size=$size"
+      echo "${role}_font_${count}_variable=$var"
+      echo "${role}_font_${count}_name_b64=$nameb64"
+    done < "$LIST_FILE"
+  fi
+  echo "${role}_font_count=$count"
 }
 
 read_flag() {
@@ -55,6 +129,12 @@ read_percent() {
   esac
   [ "$value" -ge 20 ] 2>/dev/null || value=20
   [ "$value" -le 100 ] 2>/dev/null || value=100
+  echo "$value"
+}
+
+read_fallback() {
+  value="$(cat "$1" 2>/dev/null)"
+  [ "$value" = "0" ] || value=1
   echo "$value"
 }
 
@@ -216,16 +296,8 @@ apply_emoji() {
 
 print_status() {
   echo "module=ok"
-  for role in chinese western; do
-    role_paths "$role"
-    size=0
-    [ -f "$ROLE_FILE" ] && size="$(stat -c %s "$ROLE_FILE" 2>/dev/null)"
-    name="$(cat "$NAME_FILE" 2>/dev/null)"
-    variable="$(read_flag "$VARIABLE_FILE")"
-    echo "${role}_size=$size"
-    echo "${role}_name_b64=$name"
-    echo "${role}_variable=$variable"
-  done
+  print_role_chain chinese
+  print_role_chain western
 
   emoji_mode="$(read_emoji_mode)"
   emoji_target="$(cat "$EMOJI_TARGETS_FILE" 2>/dev/null)"
@@ -242,6 +314,7 @@ print_status() {
   echo "western_targets=$(cat "$DATA_DIR/western.targets" 2>/dev/null)"
   echo "chinese_targets=$(cat "$DATA_DIR/chinese.targets" 2>/dev/null)"
   echo "western_scale=$(read_percent "$WESTERN_SIZE_FILE")"
+  echo "fallback=$(read_fallback "$FALLBACK_FILE")"
 
   [ -f "$DATA_DIR/pending_reboot" ] && echo "pending_reboot=1" || echo "pending_reboot=0"
 
@@ -285,7 +358,6 @@ begin_upload() {
 
 commit_upload() {
   role="$1"
-  role_paths "$role"
   expected="$2"
   variable="$3"
   name_b64="$4"
@@ -295,27 +367,147 @@ commit_upload() {
   esac
   case "$variable" in 0|1) ;; *) fail "invalid_variable" ;; esac
   case "$name_b64" in *[!A-Za-z0-9+/=]*) fail "invalid_name" ;; esac
-  [ -f "$TEMP_FILE" ] || fail "missing_upload"
 
+  role_paths "$role"
+
+  [ -f "$TEMP_FILE" ] || fail "missing_upload"
   actual="$(stat -c %s "$TEMP_FILE" 2>/dev/null)"
   [ "$actual" = "$expected" ] || fail "size_mismatch"
 
-  mv -f "$TEMP_FILE" "$TARGET_FILE" || fail "save_failed"
-  chmod 0644 "$TARGET_FILE"
-  printf '%s\n' "$name_b64" > "$NAME_FILE"
-  chmod 0644 "$NAME_FILE"
-
   if [ "$role" = "emoji" ]; then
+    mv -f "$TEMP_FILE" "$TARGET_FILE" || fail "save_failed"
+    chmod 0644 "$TARGET_FILE"
+    printf '%s\n' "$name_b64" > "$NAME_FILE"
+    chmod 0644 "$NAME_FILE"
     apply_emoji custom
     return
   fi
 
-  printf '%s\n' "$variable" > "$VARIABLE_FILE"
-  chmod 0644 "$VARIABLE_FILE"
+  migrate_role "$role"
+  slot="$(next_slot "$role")"
+  [ -n "$slot" ] || fail "too_many_fonts"
+
+  mkdir -p "$SYSTEM_FONT_DIR" || fail "mkdir_failed"
+  mv -f "$TEMP_FILE" "$SYSTEM_FONT_DIR/$slot" || fail "save_failed"
+  chmod 0644 "$SYSTEM_FONT_DIR/$slot"
+  printf '%s %s %s\n' "$slot" "$variable" "$name_b64" >> "$LIST_FILE" || fail "chain_save_failed"
+  chmod 0644 "$LIST_FILE"
   apply_config
   touch "$DATA_DIR/pending_reboot"
   sync
   echo "ok=commit"
+}
+
+remove_font() {
+  role="$1"
+  name="$2"
+  case "$role" in chinese|western) ;; *) fail "invalid_role" ;; esac
+  role_paths "$role"
+  valid_font_slot "$role" "$name" || fail "invalid_font_name"
+  migrate_role "$role"
+  [ -s "$LIST_FILE" ] || fail "font_not_found"
+
+  tmp="$DATA_DIR/.$role.list.new"
+  found=0
+  : > "$tmp" || fail "chain_save_failed"
+  while IFS= read -r entry; do
+    set -- $entry
+    [ "$1" = "$name" ] && { found=1; continue; }
+    printf '%s\n' "$entry" >> "$tmp"
+  done < "$LIST_FILE"
+
+  if [ "$found" != 1 ]; then
+    rm -f "$tmp"
+    fail "font_not_found"
+  fi
+
+  mv -f "$tmp" "$LIST_FILE" || fail "chain_save_failed"
+  chmod 0644 "$LIST_FILE"
+  rm -f "$SYSTEM_FONT_DIR/$name"
+  apply_config
+  touch "$DATA_DIR/pending_reboot"
+  sync
+  echo "ok=remove"
+}
+
+reorder_fonts() {
+  role="$1"
+  shift
+  case "$role" in chinese|western) ;; *) fail "invalid_role" ;; esac
+  role_paths "$role"
+  migrate_role "$role"
+
+  tmp="$DATA_DIR/.$role.list.new"
+  : > "$tmp" || fail "chain_save_failed"
+
+  for name in "$@"; do
+    [ -n "$name" ] || continue
+    valid_font_slot "$role" "$name" || { rm -f "$tmp"; fail "invalid_font_name"; }
+    line=""
+    while IFS= read -r entry; do
+      set -- $entry
+      [ "$1" = "$name" ] && { line="$entry"; break; }
+    done < "$LIST_FILE"
+    [ -n "$line" ] || { rm -f "$tmp"; fail "font_not_found"; }
+    printf '%s\n' "$line" >> "$tmp"
+  done
+
+  if [ "$(sort "$tmp" 2>/dev/null)" != "$(sort "$LIST_FILE" 2>/dev/null)" ]; then
+    rm -f "$tmp"
+    fail "reorder_mismatch"
+  fi
+
+  mv -f "$tmp" "$LIST_FILE" || fail "chain_save_failed"
+  chmod 0644 "$LIST_FILE"
+  apply_config
+  touch "$DATA_DIR/pending_reboot"
+  sync
+  echo "ok=reorder"
+}
+
+replace_font() {
+  role="$1"
+  name="$2"
+  expected="$3"
+  variable="$4"
+  name_b64="$5"
+  case "$role" in chinese|western) ;; *) fail "invalid_role" ;; esac
+  role_paths "$role"
+  valid_font_slot "$role" "$name" || fail "invalid_font_name"
+  migrate_role "$role"
+
+  case "$expected" in ''|*[!0-9]*) fail "invalid_size" ;; esac
+  case "$variable" in 0|1) ;; *) fail "invalid_variable" ;; esac
+  case "$name_b64" in *[!A-Za-z0-9+/=]*) fail "invalid_name" ;; esac
+  [ -f "$TEMP_FILE" ] || fail "missing_upload"
+  actual="$(stat -c %s "$TEMP_FILE" 2>/dev/null)"
+  [ "$actual" = "$expected" ] || fail "size_mismatch"
+
+  tmp="$DATA_DIR/.$role.list.new"
+  found=0
+  : > "$tmp" || fail "chain_save_failed"
+  while IFS= read -r entry; do
+    set -- $entry
+    if [ "$1" = "$name" ]; then
+      printf '%s %s %s\n' "$name" "$variable" "$name_b64" >> "$tmp"
+      found=1
+    else
+      printf '%s\n' "$entry" >> "$tmp"
+    fi
+  done < "$LIST_FILE"
+  if [ "$found" != 1 ]; then
+    rm -f "$tmp"
+    fail "font_not_found"
+  fi
+
+  mv -f "$TEMP_FILE" "$SYSTEM_FONT_DIR/$name" || fail "save_failed"
+  chmod 0644 "$SYSTEM_FONT_DIR/$name"
+  mv -f "$tmp" "$LIST_FILE" || fail "chain_save_failed"
+  chmod 0644 "$LIST_FILE"
+  apply_config
+  touch "$DATA_DIR/pending_reboot"
+  sync
+  echo "ok=replace"
 }
 
 abort_upload() {
@@ -340,12 +532,28 @@ set_western_size() {
   echo "ok=western-size"
 }
 
+set_fallback() {
+  value="$1"
+  case "$value" in 0|1) ;; *) fail "invalid_fallback" ;; esac
+  mkdir -p "$DATA_DIR" || fail "mkdir_failed"
+  printf '%s\n' "$value" > "$FALLBACK_FILE" || fail "fallback_save_failed"
+  chmod 0644 "$FALLBACK_FILE"
+  apply_config
+  touch "$DATA_DIR/pending_reboot"
+  sync
+  echo "ok=fallback"
+}
+
 case "$1" in
   status) print_status ;;
   begin) begin_upload "$2" "$3" ;;
   commit) commit_upload "$2" "$3" "$4" "$5" ;;
   abort) abort_upload "$2" ;;
+  remove) remove_font "$2" "$3" ;;
+  replace) replace_font "$2" "$3" "$4" "$5" "$6" ;;
+  reorder) reorder_fonts "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" ;;
   western-size) set_western_size "$2" ;;
+  fallback-set) set_fallback "$2" ;;
   emoji-set) apply_emoji "$2" ;;
   emoji-detect)
     target="$(detect_emoji_target)"

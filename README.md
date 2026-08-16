@@ -1,15 +1,17 @@
 # Font Settings
 
 - 作者：**yuzlyn**
-- 版本：**v2.2.7**
+- 版本：**v2.3.0**
 - 模块 ID：`font-settings`
 
-这是一个适用于 Android 8.0+ 的通用 KernelSU 字体模块，不限定手机品牌或 ROM。模块提供离线 WebUI，可分别上传中文和西文 `.ttf` 文件，并可选择内置 iOS、Google、Blobmoji、Facebook Emoji 或上传自定义 `.ttf/.otf`。所有替换均通过 KernelSU systemless mount 生效，不直接修改系统分区。
+这是一个适用于 Android 8.0+ 的通用 KernelSU 字体模块，不限定手机品牌或 ROM。模块提供离线 WebUI，中文与西文各自可上传多个 `.ttf` 字体并按顺序组成 font-family 回退链（缺字自动回退，支持拖拽排序），并可选择内置 iOS、Google、Blobmoji、Facebook Emoji 或上传自定义 `.ttf/.otf`。所有替换均通过 KernelSU systemless mount 生效，不直接修改系统分区。
 
 ## 下载
 
-- 完整包：[font-settings_v2.2.7_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.2.7/font-settings_v2.2.7_KSU.zip)，`178,704,633` 字节，SHA-256：`0077D966AF971D67C0E487DEE8B876F9F55B499407187AB7CF17FC633EF22872`。
-- 精简包：[font-settings_v2.2.7_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.2.7/font-settings_v2.2.7_lite_KSU.zip)，`32,983,906` 字节，SHA-256：`E187EEAFD8EB5B78FD1CD029690286E117EFAA6524753CD18105DB142D83AAE6`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+- 完整包：[font-settings_v2.3.0_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.3.0/font-settings_v2.3.0_KSU.zip)，`178,709,304` 字节，SHA-256：`0D383A46E3D01E752AF0F7974EF046336176AD1DBD26747B4BF53FC3DA5D57D4`。
+- 精简包：[font-settings_v2.3.0_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.3.0/font-settings_v2.3.0_lite_KSU.zip)，`32,988,577` 字节，SHA-256：`95CFBE7BAB61AE74E876A30828EA636B1A40C0AD01E1B75C272CBA07EA9A309C`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+
+v2.3.0 新增自组 font-family 多字体回退链。中文与西文各自可上传最多 8 个字体，在 WebUI 中拖拽排序，按顺序组成回退链；上传字体缺少的字形自动回退到后续字体。新增“缺字回退”开关，可决定是否在链末追加系统字体作为最终兜底。后端为每个链级字体生成独立的 `<family>`，并保留原字族字重与 `fallbackFor` 关系。
 
 v2.2.7 将西文字号调节改为直接重写西文字体文件的 `head.unitsPerEm`，不再只依赖部分 ROM 可能忽略的字体 XML `size` 属性。上传西文字体和调整滑块都会重新生成缩放后的字体文件，范围为 `20%` 到 `100%`，默认 `100%`。
 
@@ -61,7 +63,7 @@ v1.0.1 修复 KernelSU 3.2.4 新版三参数异步 `ksu.exec` 接口兼容问题
 2. 在 KernelSU 模块页面安装完整包或精简包；两者不可同时安装。
 3. 重启手机，使模块及内置默认字体首次生效。
 4. 回到 KernelSU 模块页面，打开本模块的 WebUI。
-5. 分别选择中文和西文 TTF，等待进度条完成。
+5. 分别选择中文和西文 TTF（每个角色可添加多个字体，并在卡片内拖拽排序组成回退链），等待进度条完成。
 6. 如西文字体偏大，可在“西文字号”滑块中调整比例；范围 `20%` 到 `100%`，默认 `100%`。
 7. 在“Emoji 设置”中保持系统默认、选择一个可用内置预设，或上传自定义 `.ttf/.otf`。
 8. 点击“重启手机”，重启后使用新字体与 Emoji。
@@ -72,6 +74,7 @@ v1.0.1 修复 KernelSU 3.2.4 新版三参数异步 `ksu.exec` 接口兼容问题
 
 - 仅选择扩展名为 `.ttf` 的 SFNT/TrueType 字体。
 - 单个文件最大 `512 MB`。
+- 中文与西文每个角色最多添加 `8` 个字体，按列表顺序组成回退链；链末是否追加系统字体由“缺字回退”开关控制。
 - 中文字体应包含所需的简体和繁体字形；同一个中文文件同时用于 `zh-Hans` 与 `zh-Hant` fallback。
 - 西文字体应包含拉丁字母、数字和常用标点。
 - 页面会读取 `fvar` 表并识别 `wght` 可变轴。可变字体使用权重轴映射，静态字体使用 Android 合成权重。
@@ -109,7 +112,7 @@ WebUI 通过 root bridge 读取 `theme_customization_overlay_packages` 中的 Mo
 
 页面背景使用 `surface-container`，字体与系统卡片使用单一的 `surface-container-low` 大色块。卡片采用 35dp 圆角，不使用硬描边、内嵌白色内容层或阴影。字体类型 FilterChip 与分段按钮轨道使用 `surface-container-highest`；KernelSU 已连接状态使用 `primary-container` / `on-primary-container`；上传操作使用 Filled Tonal Button，并以 `primary-container` 提供强调层级。Chip、操作按钮和分段选择器均为 Full Shape。重启按钮禁用时使用 12% `onSurface` 背景和 38% `onSurface` 文字。亮色与暗色模式均直接使用 MaterialKolor 动态方案生成的对应 token。
 
-上传字体时，对应字体卡片显示确定进度的 Material 直线进度条；读取模块配置时，页面顶部显示默认的不确定线性进度动画。西文字体卡片提供 `20%` 到 `100%` 的字号滑块，调整后会重新生成缩放后的字体文件和字体 XML，并提示重启生效。减少动态效果的系统偏好开启后，动画会自动降级。
+上传字体时，对应字体卡片显示确定进度的 Material 直线进度条；读取模块配置时，页面顶部显示默认的不确定线性进度动画。中文与西文字体卡片下方按回退顺序列出已上传字体，可拖拽手柄排序、点击删除按钮移除，`#1` 标记优先级最高的字体；“缺字回退”开关位于字体卡片下方，控制是否在链末追加系统字体。西文字体卡片提供 `20%` 到 `100%` 的字号滑块，调整后会重新生成缩放后的字体文件和字体 XML，并提示重启生效。减少动态效果的系统偏好开启后，动画会自动降级。
 
 中文字体使用“文”作为前导图标；西文字体使用纯西文 `Aa` 图标，不使用带中文“文”的翻译图标。
 
@@ -123,10 +126,11 @@ WebUI 通过 root bridge 读取 `theme_customization_overlay_packages` 中的 Mo
 - 西文字体映射到系统默认 `sans-serif`、常见 OEM `sys-sans-en` / `op-sans-en`，以及旧 Android 的首个未命名字族。
 - 中文字体只映射 `zh` / `yue` 语言 family，包括 `zh-Hans`、`zh-Hant`、`zh-Bopo` 等，不改写日文、韩文、Emoji、数学符号或 serif family。
 - 生成器会移除原字体专属的 TTC `index`、PostScript 名称和轴声明；可变字体按原 XML 权重写入 `wght` 轴，静态字体交给 Android 合成权重。
+- 回退链的每个字体生成一个独立的 `<family>`（首个保留原 `name`/`lang`，后续级别去掉 `name` 避免命名冲突），按列表顺序排列；开启“缺字回退”时在链末追加原始系统字族。Android 按 `<family>` 顺序做字形回退，因此缺字会依次落到后续字体。
 - 西文字号以 `data/western.size` 保存，范围限制为 `20` 到 `100`。WebUI 会通过调整西文字体 `head.unitsPerEm` 生成缩放后的字体文件，生成器也会为小于 `100` 的西文字体节点写入 Android 字体 XML 的 `size` 属性作为兼容补充。
 - 浏览器以 48 KiB 分块通过 KernelSU root bridge 写入临时文件。
 - 上传前由浏览器重建字体的 Unicode `cmap` 并重算 SFNT 校验和；其他字体表和字形数据保持不变。
-- 提交时校验最终文件大小，再替换模块中的固定字体文件，并从设备原始备份重新生成所有已识别的字体 XML。
+- 提交时校验最终文件大小，把新字体写入空闲槽位（`FontSetting<Role>-<n>.ttf`）并追加到对应角色的 `data/<role>.list`，再从设备原始备份重新生成所有已识别的字体 XML。
 - Emoji 应用时依次读取 Android 字体 XML 中首个未标记 `ignore="true"` 的 `und-Zsye` family，并确认对应文件实际存在于 `/system/fonts`。XML 不可用时回退扫描 `NotoColorEmoji.ttf`、`SamsungColorEmoji.ttf`、`NotoColorEmojiLegacy.ttf` 及其他 Emoji `.ttf/.otf`。
 - 检测会跳过 `Flags` 和 `Compat` 字体，避免把主 Emoji 字体错误覆盖到独立旗帜或兼容补充字体。目标文件名保存在 `data/emoji.targets`，选择“保持默认”时只删除本模块记录的覆盖文件。
 - 选定字体会复制并重命名为 `system/fonts/<检测到的文件名>`，由 KernelSU OverlayFS/挂载机制在下次启动覆盖系统同名文件。
@@ -156,7 +160,7 @@ font-settings/
 ├── service.sh
 ├── action.sh
 ├── config/original/        # 安装时生成的设备原始字体 XML 备份
-├── data/                   # 配置清单、映射数量、文件名、字体类型、字号和待重启状态
+├── data/                   # 字体链清单 <role>.list、映射数量、Emoji 状态、字号与待重启状态
 ├── emoji/
 │   ├── ios/AppleColorEmoji.ttf
 │   ├── google/NotoColorEmoji.ttf
@@ -164,13 +168,13 @@ font-settings/
 │   └── facebook/Facebook-Emoji.ttf
 ├── system/
 │   ├── fonts/
-│   │   ├── FontSettingChinese.ttf
-│   │   └── FontSettingWestern.ttf
+│   │   ├── FontSettingChinese.ttf    # 中文字体链（-1/-2... 为追加槽位）
+│   │   ├── FontSettingWestern.ttf    # 西文字体链（-1/-2... 为追加槽位）
 │   └── <动态生成的设备字体 XML>
 ├── tools/
-│   ├── fontctl.sh          # 状态、上传、提交和 Emoji 切换
+│   ├── fontctl.sh          # 状态、上传、提交、删除、排序、替换和 Emoji 切换
 │   ├── fontconfig.sh       # 捕获并生成设备字体配置
-│   └── fontxml.awk         # family 级 XML 转换器
+│   └── fontxml.awk         # family 级 XML 转换器（按回退链生成多个 family）
 └── webroot/
     ├── index.html
     ├── app.js
@@ -206,13 +210,14 @@ node tests/font-isolation-test.cjs
 sh tests/fontconfig-test.sh
 ```
 
-在 `font-settings` 目录中使用支持 ZIP 的 bsdtar 打包，可确保 ZIP 内路径使用 Android 兼容的 `/`：
+使用 `package-font-settings.ps1` 分别打包完整版与精简版（内部使用支持 ZIP 的 bsdtar，确保 ZIP 内路径使用 Android 兼容的 `/`）：
 
 ```powershell
-tar -a -c -f ..\font-settings_v2.2.7_KSU.zip *
+.\package-font-settings.ps1 -Edition full
+.\package-font-settings.ps1 -Edition lite
 ```
 
-本版本已完成以下检查：AOSP/OEM/product 字体 XML 夹具通过静态与可变字体转换；真实设备配置动态生成后全部可解析；所有 shell 脚本通过设备 `sh -n`；WebUI 的 MD3 token、交互、三语言和 390×844 / 1280×900 亮暗色布局通过 Playwright 验证；最终 ZIP 通过完整性与内置 Emoji 文件检查。
+本版本已在 OPPO PHY110（Android 16 / API 36 / KernelSU 3.2.4）实机验证：动态生成的字体配置可解析且 magic mount 生效、无 minikin/font 报错；中英文字体链的添加、删除、排序与缺字回退后端命令均通过；所有 shell 脚本通过设备 `sh -n`。
 
 ## 许可与来源
 

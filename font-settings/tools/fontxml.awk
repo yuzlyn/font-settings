@@ -1,11 +1,16 @@
-function attribute(tag, name, pattern, value) {
+function attribute(tag, name,    pattern, value) {
   pattern = name "=\"[^\"]*\""
   if (!match(tag, pattern)) return ""
   value = substr(tag, RSTART + length(name) + 2, RLENGTH - length(name) - 3)
   return value
 }
 
-function family_role(header, block, name, lang, normalized) {
+function strip_name(tag) {
+  gsub(/[[:space:]]+name="[^"]*"/, "", tag)
+  return tag
+}
+
+function family_role(header, block,    name, lang, normalized) {
   name = tolower(attribute(header, "name"))
   lang = tolower(attribute(header, "lang"))
   normalized = "," lang ","
@@ -25,70 +30,99 @@ function family_role(header, block, name, lang, normalized) {
   return ""
 }
 
-function emit_font(start, finish, role,    opening, indent, weight, target, variable, i) {
-  opening = family_lines[start]
-  indent = opening
-  sub(/[^[:space:]].*$/, "", indent)
-
-  for (i = start + 1; i <= finish && opening !~ />/; i++) {
-    opening = opening " " family_lines[i]
-  }
-  gsub(/[\r\n\t]+/, " ", opening)
-  sub(/^[[:space:]]*/, "", opening)
-  sub(/>.*/, ">", opening)
-  gsub(/[[:space:]]+(index|postScriptName|supportedAxes|axes|variationSettings|size)="[^"]*"/, "", opening)
-
-  weight = attribute(opening, "weight")
-  if (weight == "") weight = "400"
-  if (role == "western") {
-    target = western
-    variable = western_variable
-    if (western_size != "" && western_size != "100") {
-      sub(/>$/, " size=\"" western_size "\">", opening)
-    }
-    western_fonts++
-  } else {
-    target = chinese
-    variable = chinese_variable
-    chinese_fonts++
-  }
-
-  print indent opening
-  print indent "    " target
-  if (variable == 1) {
-    print indent "    <axis tag=\"wght\" stylevalue=\"" weight "\"/>"
-  }
-  print indent "</font>"
-}
-
-function emit_family(    header, block, role, i, finish) {
+function emit_family(    header, block, role, indent, i, j, opening, weight,
+                         nslot, f, nf, file, variable, s, line, hdr) {
   header = ""
   block = ""
   for (i = 1; i <= family_count; i++) {
     block = block " " family_lines[i]
     if (header !~ />/) header = header " " family_lines[i]
   }
-  role = family_role(header, block)
+  gsub(/[\r\n\t]+/, " ", header)
+  sub(/^[[:space:]]*/, "", header)
+  sub(/>.*/, ">", header)
 
+  role = family_role(header, block)
   if (role == "") {
     for (i = 1; i <= family_count; i++) print family_lines[i]
     return
   }
 
+  indent = family_lines[1]
+  sub(/[^[:space:]].*$/, "", indent)
+
+  nslot = 0
   i = 1
   while (i <= family_count) {
     if (family_lines[i] ~ /<font([[:space:]>])/) {
-      finish = i
-      while (finish <= family_count && family_lines[finish] !~ /<\/font>/) finish++
-      if (finish <= family_count) {
-        emit_font(i, finish, role)
-        i = finish + 1
-        continue
+      opening = family_lines[i]
+      j = i + 1
+      while (j <= family_count && opening !~ />/) {
+        opening = opening " " family_lines[j]
+        j++
       }
+      gsub(/[\r\n\t]+/, " ", opening)
+      sub(/^[[:space:]]*/, "", opening)
+      sub(/>.*/, ">", opening)
+      weight = attribute(opening, "weight")
+      if (weight == "") weight = "400"
+      nslot++
+      slot_weight[nslot] = weight
+      slot_style[nslot] = attribute(opening, "style")
+      slot_fallback[nslot] = attribute(opening, "fallbackFor")
+      while (i <= family_count && family_lines[i] !~ /<\/font>/) i++
+      i++
+    } else {
+      i++
     }
-    print family_lines[i]
-    i++
   }
+  if (nslot == 0) {
+    nslot = 1
+    slot_weight[1] = "400"
+    slot_style[1] = ""
+    slot_fallback[1] = ""
+  }
+
+  if (role == "western") {
+    nf = split(western_list, files, ",")
+    split(western_vars, vars, ",")
+  } else {
+    nf = split(chinese_list, files, ",")
+    split(chinese_vars, vars, ",")
+  }
+  if (nf > max_fonts) nf = max_fonts
+
+  for (f = 1; f <= nf; f++) {
+    file = files[f]
+    if (file == "") continue
+    variable = vars[f]
+    hdr = (f == 1) ? header : strip_name(header)
+    print indent hdr
+    for (s = 1; s <= nslot; s++) {
+      line = indent "    <font"
+      if (slot_weight[s] != "") line = line " weight=\"" slot_weight[s] "\""
+      if (slot_style[s] != "") line = line " style=\"" slot_style[s] "\""
+      if (slot_fallback[s] != "") line = line " fallbackFor=\"" slot_fallback[s] "\""
+      if (role == "western" && f == 1 && western_size != "" && western_size != "100") {
+        line = line " size=\"" western_size "\""
+      }
+      line = line ">"
+      print line
+      print indent "        " file
+      if (variable == 1) {
+        print indent "        <axis tag=\"wght\" stylevalue=\"" slot_weight[s] "\"/>"
+      }
+      print indent "    </font>"
+    }
+    print indent "</family>"
+  }
+
+  if (fallback == 1) {
+    for (i = 1; i <= family_count; i++) print family_lines[i]
+  }
+
+  if (role == "western") western_fonts++
+  else chinese_fonts++
 }
 
 BEGIN {
@@ -97,6 +131,7 @@ BEGIN {
   western_fonts = 0
   chinese_fonts = 0
   unnamed_default = 0
+  if (max_fonts == "") max_fonts = 8
 }
 
 {

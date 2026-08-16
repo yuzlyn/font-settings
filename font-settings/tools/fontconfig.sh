@@ -29,6 +29,52 @@ read_percent() {
   echo "$value"
 }
 
+read_fallback() {
+  value="$(cat "$1" 2>/dev/null)"
+  [ "$value" = "0" ] || value=1
+  echo "$value"
+}
+
+# Fills CHAIN_FILES / CHAIN_VARS with comma-joined ordered font names and
+# variable flags for a role. Falls back to the legacy single-font slot when the
+# chain list has not been created yet.
+read_role_chain() {
+  role="$1"
+  list_file="$DATA_DIR/$role.list"
+  CHAIN_FILES=""
+  CHAIN_VARS=""
+
+  if [ -s "$list_file" ]; then
+    while IFS= read -r entry; do
+      set -- $entry
+      name="$1"
+      var="$2"
+      case "$name" in
+        FontSettingChinese.ttf|FontSettingChinese-[0-9]*.ttf|FontSettingWestern.ttf|FontSettingWestern-[0-9]*.ttf) ;;
+        *) continue ;;
+      esac
+      case "$var" in 0|1) ;; *) var=0 ;; esac
+      if [ -n "$CHAIN_FILES" ]; then
+        CHAIN_FILES="$CHAIN_FILES,$name"
+        CHAIN_VARS="$CHAIN_VARS,$var"
+      else
+        CHAIN_FILES="$name"
+        CHAIN_VARS="$var"
+      fi
+    done < "$list_file"
+  fi
+
+  if [ -z "$CHAIN_FILES" ]; then
+    if [ "$role" = "chinese" ]; then
+      CHAIN_FILES="FontSettingChinese.ttf"
+      CHAIN_VARS="$(read_flag "$DATA_DIR/chinese.variable")"
+    else
+      CHAIN_FILES="FontSettingWestern.ttf"
+      CHAIN_VARS="$(read_flag "$DATA_DIR/western.variable")"
+    fi
+  fi
+}
+
 valid_relative_path() {
   case "$1" in
     etc/fonts.xml|etc/font_fallback.xml|system_ext/etc/fonts.xml|system_ext/etc/fonts_base.xml|product/etc/fonts.xml|product/etc/fonts_customization.xml|vendor/etc/fonts.xml) return 0 ;;
@@ -86,9 +132,14 @@ apply_configs() {
   manifest_ready || fail "font_config_backup_missing"
   [ -f "$AWK_SCRIPT" ] || fail "font_config_generator_missing"
 
-  western_variable="$(read_flag "$DATA_DIR/western.variable")"
-  chinese_variable="$(read_flag "$DATA_DIR/chinese.variable")"
   western_size="$(read_percent "$DATA_DIR/western.size")"
+  fallback="$(read_fallback "$DATA_DIR/fallback")"
+  read_role_chain chinese
+  chinese_files="$CHAIN_FILES"
+  chinese_vars="$CHAIN_VARS"
+  read_role_chain western
+  western_files="$CHAIN_FILES"
+  western_vars="$CHAIN_VARS"
   total_western=0
   total_chinese=0
 
@@ -102,11 +153,13 @@ apply_configs() {
     mkdir -p "${output%/*}" || fail "font_config_write_failed"
 
     awk \
-      -v western="FontSettingWestern.ttf" \
-      -v chinese="FontSettingChinese.ttf" \
-      -v western_variable="$western_variable" \
-      -v chinese_variable="$chinese_variable" \
+      -v western_list="$western_files" \
+      -v western_vars="$western_vars" \
+      -v chinese_list="$chinese_files" \
+      -v chinese_vars="$chinese_vars" \
       -v western_size="$western_size" \
+      -v fallback="$fallback" \
+      -v max_fonts="8" \
       -v allow_unnamed="$allow_unnamed" \
       -v stats="$stats_file" \
       -f "$AWK_SCRIPT" "$source" > "$output.new" || fail "font_config_generate_failed"

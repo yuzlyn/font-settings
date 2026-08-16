@@ -23,6 +23,13 @@ if [ -f "$OLDMOD/system/fonts/FontSettingChinese.ttf" ] && [ -f "$OLDMOD/system/
     [ -f "$OLDMOD/data/$file" ] && cp -af "$OLDMOD/data/$file" "$MODPATH/data/$file"
   done
 
+  # 保留多字体链：slot 字体文件与顺序清单。
+  for slot in "$OLDMOD"/system/fonts/FontSettingChinese-*.ttf "$OLDMOD"/system/fonts/FontSettingWestern-*.ttf; do
+    [ -f "$slot" ] && cp -af "$slot" "$MODPATH/system/fonts/"
+  done
+  for file in chinese.list western.list; do
+    [ -f "$OLDMOD/data/$file" ] && cp -af "$OLDMOD/data/$file" "$MODPATH/data/$file"
+  done
 fi
 
 # 通用版保留首次安装时捕获的 ROM 原始配置，避免模块更新时备份到自己的 overlay。
@@ -30,6 +37,12 @@ if [ -s "$OLDMOD/data/font-configs.list" ] && [ -d "$OLDMOD/config/original" ]; 
   mkdir -p "$MODPATH/config/original"
   cp -af "$OLDMOD/config/original/." "$MODPATH/config/original/"
   cp -af "$OLDMOD/data/font-configs.list" "$MODPATH/data/font-configs.list"
+fi
+
+# 保留缺字回退开关状态，避免更新时被重置。
+if [ -f "$OLDMOD/data/fallback" ]; then
+  mkdir -p "$MODPATH/data"
+  cp -af "$OLDMOD/data/fallback" "$MODPATH/data/fallback"
 fi
 
 config_result="$(sh "$MODPATH/tools/fontconfig.sh" prepare 2>&1)"
