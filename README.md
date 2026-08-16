@@ -1,15 +1,17 @@
 # Font Settings
 
 - 作者：**yuzlyn**
-- 版本：**v2.3.0**
+- 版本：**v2.3.1**
 - 模块 ID：`font-settings`
 
 这是一个适用于 Android 8.0+ 的通用 KernelSU 字体模块，不限定手机品牌或 ROM。模块提供离线 WebUI，中文与西文各自可上传多个 `.ttf` 字体并按顺序组成 font-family 回退链（缺字自动回退，支持拖拽排序），并可选择内置 iOS、Google、Blobmoji、Facebook Emoji 或上传自定义 `.ttf/.otf`。所有替换均通过 KernelSU systemless mount 生效，不直接修改系统分区。
 
 ## 下载
 
-- 完整包：[font-settings_v2.3.0_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.3.0/font-settings_v2.3.0_KSU.zip)，`178,709,304` 字节，SHA-256：`0D383A46E3D01E752AF0F7974EF046336176AD1DBD26747B4BF53FC3DA5D57D4`。
-- 精简包：[font-settings_v2.3.0_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.3.0/font-settings_v2.3.0_lite_KSU.zip)，`32,988,577` 字节，SHA-256：`95CFBE7BAB61AE74E876A30828EA636B1A40C0AD01E1B75C272CBA07EA9A309C`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+- 完整包：[font-settings_v2.3.1_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.3.1/font-settings_v2.3.1_KSU.zip)，`178,709,325` 字节，SHA-256：`8DD521290406FECFF5475FECCE3E0364EFAE1992F2295D9AD246A3D52B885694`。
+- 精简包：[font-settings_v2.3.1_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.3.1/font-settings_v2.3.1_lite_KSU.zip)，`32,988,598` 字节，SHA-256：`AD008DDF8B6A670221EBEB13C65E72C50C7630552A28E95C648BCEEA6BB0BCEE`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+
+v2.3.1 修复“缺字回退”开启时，系统兜底字体与用户字体生成同名 `<family>`，导致部分设备默认 `sans-serif` 回退到系统字体、西文字体未生效的问题。现在系统兜底以未命名 `<family>` 追加在链末，用户字体始终优先。
 
 v2.3.0 新增自组 font-family 多字体回退链。中文与西文各自可上传最多 8 个字体，在 WebUI 中拖拽排序，按顺序组成回退链；上传字体缺少的字形自动回退到后续字体。新增“缺字回退”开关，可决定是否在链末追加系统字体作为最终兜底。后端为每个链级字体生成独立的 `<family>`，并保留原字族字重与 `fallbackFor` 关系。
 

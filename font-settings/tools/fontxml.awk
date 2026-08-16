@@ -118,7 +118,11 @@ function emit_family(    header, block, role, indent, i, j, opening, weight,
   }
 
   if (fallback == 1) {
-    for (i = 1; i <= family_count; i++) print family_lines[i]
+    for (i = 1; i <= family_count; i++) {
+      line = family_lines[i]
+      if (i == 1) gsub(/[[:space:]]+name="[^"]*"/, "", line)
+      print line
+    }
   }
 
   if (role == "western") western_fonts++
