@@ -400,12 +400,20 @@
   }
 
   function checksum(bytes) {
-    const padded = align4(bytes.byteLength);
-    const buffer = new Uint8Array(padded);
-    buffer.set(bytes);
-    const view = new DataView(buffer.buffer);
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     let sum = 0;
-    for (let offset = 0; offset < padded; offset += 4) sum = (sum + view.getUint32(offset, false)) >>> 0;
+    let offset = 0;
+    const aligned = bytes.byteLength & ~3;
+    for (; offset < aligned; offset += 4) sum = (sum + view.getUint32(offset, false)) >>> 0;
+    if (offset < bytes.byteLength) {
+      const tailBytes = bytes.byteLength - offset;
+      let tail = 0;
+      while (offset < bytes.byteLength) {
+        tail = (tail << 8) | bytes[offset];
+        offset += 1;
+      }
+      sum = (sum + (tail << ((4 - tailBytes) * 8))) >>> 0;
+    }
     return sum;
   }
 

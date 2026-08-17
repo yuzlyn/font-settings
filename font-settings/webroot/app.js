@@ -1,7 +1,9 @@
 const MODULE_ID = "font-settings";
 const ACTIVE_MODDIR = `/data/adb/modules/${MODULE_ID}`;
 const UPDATE_MODDIR = `/data/adb/modules_update/${MODULE_ID}`;
-const CHUNK_SIZE = 48 * 1024;
+// Largest binary chunk whose base64 form plus command overhead stays safely
+// below the 128 KiB execve argument limit (MAX_ARG_STRLEN) for `sh -c`.
+const CHUNK_SIZE = 80 * 1024;
 const TRANSLATIONS = {
   "zh-CN": {
     pageTitle: "字体设置",
@@ -458,6 +460,21 @@ let titleAnimationFrame = 0;
 let monetSeedRequest = null;
 let latestStatus = {};
 let latestChains = { chinese: [], western: [] };
+let shellGzipAvailable = false;
+let shellCapabilitiesPromise = null;
+
+function probeShellCapabilities() {
+  if (!shellCapabilitiesPromise) {
+    shellCapabilitiesPromise = exec("command -v gzip >/dev/null 2>&1 && echo ok")
+      .then((result) => {
+        shellGzipAvailable = result === "ok";
+      })
+      .catch(() => {
+        shellGzipAvailable = false;
+      });
+  }
+  return shellCapabilitiesPromise;
+}
 
 const CHAIN_ICONS = {
   grip: '<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h6V4H9v2Zm0 7h6v-2H9v2Zm0 7h6v-2H9v2Z"></path></svg>',
@@ -835,22 +852,31 @@ function setEmojiBusy(busy) {
   rebootButton.disabled = busy || rebootChip.classList.contains("hidden");
 }
 
-async function appendChunk(role, bytes) {
-  const encoded = bytesToBase64(bytes);
+async function compressChunk(bytes) {
+  const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+async function appendChunk(role, bytes, compressed) {
+  const payload = compressed ? await compressChunk(bytes) : bytes;
+  const encoded = bytesToBase64(payload);
   const temporaryPath = `${moduleDir}/data/.${role}.upload`;
-  const command = `printf '%s' '${encoded}' | base64 -d >> '${temporaryPath}' && echo ok`;
+  const decompress = compressed ? " | gzip -dc" : "";
+  const command = `printf '%s' '${encoded}' | base64 -d${decompress} >> '${temporaryPath}' && echo ok`;
   if ((await exec(command)).split(/\r?\n/).at(-1) !== "ok") {
     throw new Error("write_failed");
   }
 }
 
 async function uploadRoleBytes(role, bytes, variable, name, slotName) {
+  const clientCompress = typeof window.CompressionStream === "function";
+  if (clientCompress) await probeShellCapabilities();
+  const compressed = clientCompress && shellGzipAvailable;
   assertCommand(await exec(`${fontctl} begin ${role} ${bytes.byteLength}`), "begin");
   for (let offset = 0; offset < bytes.byteLength; offset += CHUNK_SIZE) {
     const end = Math.min(offset + CHUNK_SIZE, bytes.byteLength);
-    await appendChunk(role, bytes.subarray(offset, end));
+    await appendChunk(role, bytes.subarray(offset, end), compressed);
     setProgress(roles[role].progress, end / bytes.byteLength);
-    await new Promise((resolve) => requestAnimationFrame(resolve));
   }
   const finish = slotName
     ? `${fontctl} replace ${role} ${slotName} ${bytes.byteLength} ${variable} ${name}`
@@ -902,14 +928,16 @@ async function uploadEmojiFont(file) {
 
   try {
     await inspectFont(file, true);
+    const clientCompress = typeof window.CompressionStream === "function";
+    if (clientCompress) await probeShellCapabilities();
+    const compressed = clientCompress && shellGzipAvailable;
     assertCommand(await exec(`${fontctl} begin emoji ${file.size}`), "begin");
 
     for (let offset = 0; offset < file.size; offset += CHUNK_SIZE) {
       const end = Math.min(offset + CHUNK_SIZE, file.size);
       const bytes = new Uint8Array(await file.slice(offset, end).arrayBuffer());
-      await appendChunk("emoji", bytes);
+      await appendChunk("emoji", bytes, compressed);
       setProgress(emojiProgress, end / file.size);
-      await new Promise((resolve) => requestAnimationFrame(resolve));
     }
 
     const name = utf8ToBase64(file.name);

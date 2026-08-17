@@ -1,15 +1,17 @@
 # Font Settings
 
 - 作者：**yuzlyn**
-- 版本：**v2.3.1**
+- 版本：**v2.3.2**
 - 模块 ID：`font-settings`
 
 这是一个适用于 Android 8.0+ 的通用 KernelSU 字体模块，不限定手机品牌或 ROM。模块提供离线 WebUI，中文与西文各自可上传多个 `.ttf` 字体并按顺序组成 font-family 回退链（缺字自动回退，支持拖拽排序），并可选择内置 iOS、Google、Blobmoji、Facebook Emoji 或上传自定义 `.ttf/.otf`。所有替换均通过 KernelSU systemless mount 生效，不直接修改系统分区。
 
 ## 下载
 
-- 完整包：[font-settings_v2.3.1_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.3.1/font-settings_v2.3.1_KSU.zip)，`178,709,325` 字节，SHA-256：`8DD521290406FECFF5475FECCE3E0364EFAE1992F2295D9AD246A3D52B885694`。
-- 精简包：[font-settings_v2.3.1_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.3.1/font-settings_v2.3.1_lite_KSU.zip)，`32,988,598` 字节，SHA-256：`AD008DDF8B6A670221EBEB13C65E72C50C7630552A28E95C648BCEEA6BB0BCEE`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+- 完整包：[font-settings_v2.3.2_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.3.2/font-settings_v2.3.2_KSU.zip)，`178,709,768` 字节，SHA-256：`330A5D21313E1AF2E86BE444B4FDE09E8496D0DD1FB21CBD98596BE0DB095A06`。
+- 精简包：[font-settings_v2.3.2_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.3.2/font-settings_v2.3.2_lite_KSU.zip)，`32,989,041` 字节，SHA-256：`9D4974E5BD9D4704AD93B1812DFCE9870DC68999F7808A60A401D06B4E42D239`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+
+v2.3.2 优化上传字体速度：分块从 48 KiB 提高到 80 KiB（base64 编码后仍低于 `execve` 128 KiB 参数上限），并移除逐块动画帧等待；当 WebView 支持 `CompressionStream` 且设备 toybox 提供 `gzip` 时，分块先由浏览器 gzip 压缩、设备端以 `base64 -d | gzip -dc` 解压追加，传输量约减半，典型 20 MB 中文字体的桥接往返次数从约 430 次降到 130 次左右；任一端不支持时自动回退原始 base64 分块。字体隔离的 SFNT 校验和改为就地计算，不再为每个字体表分配对齐拷贝，降低大字体处理的内存峰值。
 
 v2.3.1 修复“缺字回退”开启时，系统兜底字体与用户字体生成同名 `<family>`，导致部分设备默认 `sans-serif` 回退到系统字体、西文字体未生效的问题。现在系统兜底以未命名 `<family>` 追加在链末，用户字体始终优先。
 
@@ -130,7 +132,7 @@ WebUI 通过 root bridge 读取 `theme_customization_overlay_packages` 中的 Mo
 - 生成器会移除原字体专属的 TTC `index`、PostScript 名称和轴声明；可变字体按原 XML 权重写入 `wght` 轴，静态字体交给 Android 合成权重。
 - 回退链的每个字体生成一个独立的 `<family>`（首个保留原 `name`/`lang`，后续级别去掉 `name` 避免命名冲突），按列表顺序排列；开启“缺字回退”时在链末追加原始系统字族。Android 按 `<family>` 顺序做字形回退，因此缺字会依次落到后续字体。
 - 西文字号以 `data/western.size` 保存，范围限制为 `20` 到 `100`。WebUI 会通过调整西文字体 `head.unitsPerEm` 生成缩放后的字体文件，生成器也会为小于 `100` 的西文字体节点写入 Android 字体 XML 的 `size` 属性作为兼容补充。
-- 浏览器以 48 KiB 分块通过 KernelSU root bridge 写入临时文件。
+- 浏览器以 80 KiB 分块通过 KernelSU root bridge 写入临时文件；两端都支持时使用 gzip 压缩传输（`base64 -d | gzip -dc` 解压追加），否则回退原始 base64 分块。分块大小保证编码后的指令长度低于 `execve` 的 128 KiB 参数上限。
 - 上传前由浏览器重建字体的 Unicode `cmap` 并重算 SFNT 校验和；其他字体表和字形数据保持不变。
 - 提交时校验最终文件大小，把新字体写入空闲槽位（`FontSetting<Role>-<n>.ttf`）并追加到对应角色的 `data/<role>.list`，再从设备原始备份重新生成所有已识别的字体 XML。
 - Emoji 应用时依次读取 Android 字体 XML 中首个未标记 `ignore="true"` 的 `und-Zsye` family，并确认对应文件实际存在于 `/system/fonts`。XML 不可用时回退扫描 `NotoColorEmoji.ttf`、`SamsungColorEmoji.ttf`、`NotoColorEmojiLegacy.ttf` 及其他 Emoji `.ttf/.otf`。
@@ -204,6 +206,7 @@ npm.cmd ci --prefix .fontsetting-build --cache .npm-cache
 node build-font-setting.mjs
 node visual-check.mjs
 node tests/font-isolation-test.cjs
+node tests/upload-transfer-test.cjs
 ```
 
 字体配置转换器夹具测试需要在 Android shell 中运行：
@@ -219,7 +222,7 @@ sh tests/fontconfig-test.sh
 .\package-font-settings.ps1 -Edition lite
 ```
 
-本版本已在 OPPO PHY110（Android 16 / API 36 / KernelSU 3.2.4）实机验证：动态生成的字体配置可解析且 magic mount 生效、无 minikin/font 报错；中英文字体链的添加、删除、排序与缺字回退后端命令均通过；所有 shell 脚本通过设备 `sh -n`。
+本版本已在 OPPO PHY110（Android 16 / API 36 / KernelSU 3.2.4）实机验证：动态生成的字体配置可解析且 magic mount 生效、无 minikin/font 报错；中英文字体链的添加、删除、排序与缺字回退后端命令均通过；v2.3.2 的分块上传管道（gzip 压缩与 base64 回退路径）在设备上完成真实字体的分块上传、提交、状态核对与移除的往返验证，字节一致；所有 shell 脚本通过设备 `sh -n`。
 
 ## 许可与来源
 
