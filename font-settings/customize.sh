@@ -89,6 +89,7 @@ set_perm "$MODPATH/action.sh" 0 0 0755
 set_perm "$MODPATH/tools/fontctl.sh" 0 0 0755
 set_perm "$MODPATH/tools/fontconfig.sh" 0 0 0755
 set_perm "$MODPATH/tools/fontxml.awk" 0 0 0644
+chmod 0755 "$MODPATH/webroot/cgi-bin/exec"
 
 ui_print "- 安装完成"
 ui_print "- 请在 KernelSU 中打开模块 WebUI 上传字体"

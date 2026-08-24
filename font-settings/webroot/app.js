@@ -120,6 +120,8 @@ const TRANSLATIONS = {
     pathImportNotFound: "未找到该文件，请检查路径",
     pathImportReading: "正在读取文件",
     kernelSUConnected: "KernelSU 已连接",
+    httpConnected: "本地服务已连接",
+    httpBridgeHint: "无法连接本地服务，请确认模块已安装并重启手机",
     configSavedRestart: "已适配 {western} 项西文和 {chinese} 项中文字体映射，重启后生效",
     configLoaded: "已加载 {western} 项西文和 {chinese} 项中文字体映射",
     configBackupMissing: "系统字体配置备份缺失，请重新安装模块",
@@ -250,6 +252,8 @@ const TRANSLATIONS = {
     pathImportNotFound: "找不到該檔案，請檢查路徑",
     pathImportReading: "正在讀取檔案",
     kernelSUConnected: "KernelSU 已連線",
+    httpConnected: "本機服務已連線",
+    httpBridgeHint: "無法連線本機服務，請確認模組已安裝並重新啟動手機",
     configSavedRestart: "已調整 {western} 個西文與 {chinese} 個中文字型對應項目，重新啟動後生效",
     configLoaded: "已載入 {western} 個西文與 {chinese} 個中文字型對應項目",
     configBackupMissing: "系統字型設定備份缺失，請重新安裝模組",
@@ -380,6 +384,8 @@ const TRANSLATIONS = {
     pathImportNotFound: "File not found. Check the path.",
     pathImportReading: "Reading file",
     kernelSUConnected: "KernelSU connected",
+    httpConnected: "Local service connected",
+    httpBridgeHint: "Cannot reach the local service. Make sure the module is installed and the device restarted.",
     configSavedRestart: "Adapted {western} Latin and {chinese} Chinese font entries. Restart to apply.",
     configLoaded: "Loaded {western} Latin and {chinese} Chinese font entries",
     configBackupMissing: "The system font configuration backup is missing. Reinstall the module.",
@@ -494,11 +500,11 @@ const fontPathInput = document.querySelector("#font-path-input");
 const fontPickerFallback = document.querySelector("#font-picker-fallback");
 const cancelFontSource = document.querySelector("#cancel-font-source");
 const confirmFontPath = document.querySelector("#confirm-font-path");
-// KernelSU and APatch serve the WebUI on loopback, where the system file
-// picker works. KsuWebUIStandalone and MMRL load it from mui.kernelsu.org
-// without a WebChromeClient, so <input type="file"> clicks are silently
-// ignored there; route those hosts through the path-import dialog instead.
-const nativeWebUI = ["127.0.0.1", "localhost", "[::1]"].includes(window.location.hostname);
+// True when a WebView host (KernelSU / KsuWebUI / MMRL) injected the ksu JS
+// bridge. Browsers using the module's own localhost server have no bridge
+// and use the HTTP fallback in exec() instead.
+const hasKsuBridge = Boolean(window.ksu && typeof window.ksu.exec === "function");
+const HTTP_BRIDGE_PORT = 7125;
 let pendingFontTarget = null;
 const topAppBar = document.querySelector("mdui-top-app-bar");
 const compactTitle = document.querySelector("#compact-title");
@@ -550,7 +556,31 @@ function setChainButtonsDisabled(disabled) {
   }
 }
 
+function execHttp(command, options = {}) {
+  const timeoutMs = Math.max(1000, Number(options.timeout) || 30000);
+  return fetch(`http://127.0.0.1:${HTTP_BRIDGE_PORT}/cgi-bin/exec`, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=UTF-8" },
+    body: command,
+    signal: AbortSignal.timeout(timeoutMs),
+  })
+    .then(async (response) => {
+      const text = await response.text();
+      const newline = text.indexOf("\n");
+      if (newline < 0) throw new Error("http_bridge_bad_response");
+      const code = Number(text.slice(0, newline).trim()) || 0;
+      const output = text.slice(newline + 1);
+      if (code !== 0) throw new Error(String(output || `command_failed_${code}`).trim());
+      return output.trim();
+    })
+    .catch((error) => {
+      if (error && error.name === "TimeoutError") throw new Error("KSU_BRIDGE_TIMEOUT");
+      throw error;
+    });
+}
+
 function exec(command, options = {}) {
+  if (!hasKsuBridge) return execHttp(command, options);
   return new Promise((resolve, reject) => {
     if (!window.ksu || typeof window.ksu.exec !== "function") {
       reject(new Error("KSU_BRIDGE_UNAVAILABLE"));
@@ -895,7 +925,9 @@ function setBusy(role, busy) {
   for (const [name, item] of Object.entries(roles)) {
     item.button.disabled = busy;
     item.fileInput.disabled = busy;
-    item.weight.disabled = busy || item.weightContainer.classList.contains("hidden");
+    if (item.weight && item.weightContainer) {
+      item.weight.disabled = busy || item.weightContainer.classList.contains("hidden");
+    }
     if (name !== role && !busy) item.progress.classList.add("hidden");
   }
   current.progress.classList.toggle("hidden", !busy);
@@ -918,7 +950,9 @@ function setEmojiBusy(busy) {
   westernSize.disabled = busy;
   fallbackSwitch.disabled = busy;
   for (const item of Object.values(roles)) {
-    item.weight.disabled = busy || item.weightContainer.classList.contains("hidden");
+    if (item.weight && item.weightContainer) {
+      item.weight.disabled = busy || item.weightContainer.classList.contains("hidden");
+    }
   }
   setChainButtonsDisabled(busy);
   emojiProgress.classList.toggle("hidden", !busy);
@@ -970,26 +1004,34 @@ function openFontSource(target) {
   fontSourceDialog.open = true;
 }
 
-function attemptPickerFallback() {
-  const target = pendingFontTarget;
-  if (!target) return;
+// Opens the system file picker for a role ("chinese" | "western" | "emoji").
+// Browsers are assumed to support it. WebView hosts are probed dynamically:
+// KernelSU's WebView opens the picker (its activity pause fires a
+// visibilitychange), while hosts without a WebChromeClient (KsuWebUIStandalone,
+// MMRL) silently ignore the click, in which case onUnavailable runs.
+function requestFilePicker(target, onUnavailable) {
   const input = target === "emoji" ? emojiFile : roles[target].fileInput;
+  if (!hasKsuBridge) {
+    input.click();
+    return;
+  }
   let opened = false;
   const mark = () => {
     opened = true;
     cleanup();
-    fontSourceDialog.open = false;
   };
   const cleanup = () => {
     input.removeEventListener("change", mark);
+    input.removeEventListener("cancel", mark);
     document.removeEventListener("visibilitychange", mark);
     window.clearTimeout(timer);
   };
   const timer = window.setTimeout(() => {
     cleanup();
-    if (!opened) showMessage(t("pickerUnavailable"));
-  }, 1200);
+    if (!opened && typeof onUnavailable === "function") onUnavailable();
+  }, 1000);
   input.addEventListener("change", mark);
+  input.addEventListener("cancel", mark);
   document.addEventListener("visibilitychange", mark);
   input.click();
 }
@@ -1193,8 +1235,7 @@ async function applyEmojiMode(mode) {
   if (uploadInProgress || mode === "custom") {
     if (mode === "custom" && !uploadInProgress) {
       emojiDialog.open = false;
-      if (nativeWebUI) emojiFile.click();
-      else openFontSource("emoji");
+      requestFilePicker("emoji", () => openFontSource("emoji"));
     }
     return;
   }
@@ -1382,6 +1423,7 @@ function renderFallback(values) {
 
 function renderFontWeight(role, values) {
   const current = roles[role];
+  if (!current.weightContainer || !current.weight) return;
   const chain = latestChains[role] || [];
   const hasVariable = chain.some((font) => font.variable);
   current.weightContainer.classList.toggle("hidden", !hasVariable);
@@ -1479,7 +1521,7 @@ async function refreshStatus() {
     if (values.module !== "ok") throw new Error("status_failed");
     latestStatus = values;
 
-    bridgeLabel.textContent = t("kernelSUConnected");
+    bridgeLabel.textContent = t(hasKsuBridge ? "kernelSUConnected" : "httpConnected");
     bridgeChip.classList.add("connected");
     bridgeChip.classList.remove("connection-error");
     renderChain("chinese", values);
@@ -1511,7 +1553,7 @@ async function refreshStatus() {
     bridgeLabel.textContent = t("connectionFailed");
     bridgeChip.classList.remove("connected");
     bridgeChip.classList.add("connection-error");
-    document.querySelector("#system-status").textContent = t("openFromKernelSU");
+    document.querySelector("#system-status").textContent = t(hasKsuBridge ? "openFromKernelSU" : "httpBridgeHint");
     rebootButton.disabled = true;
   } finally {
     setIndeterminate(pageProgress, false);
@@ -1537,8 +1579,7 @@ function initialize() {
 
   for (const [role, current] of Object.entries(roles)) {
     current.button.addEventListener("click", () => {
-      if (nativeWebUI) current.fileInput.click();
-      else openFontSource(role);
+      requestFilePicker(role, () => openFontSource(role));
     });
     current.fileInput.addEventListener("change", () => {
       const [file] = current.fileInput.files;
@@ -1567,7 +1608,9 @@ function initialize() {
   cancelFontSource.addEventListener("click", () => {
     fontSourceDialog.open = false;
   });
-  fontPickerFallback.addEventListener("click", attemptPickerFallback);
+  fontPickerFallback.addEventListener("click", () => {
+    requestFilePicker(pendingFontTarget, () => showMessage(t("pickerUnavailable")));
+  });
   confirmFontPath.addEventListener("click", () => {
     importFontFromPath(pendingFontTarget, fontPathInput.value);
   });

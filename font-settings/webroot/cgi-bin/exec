@@ -1,0 +1,25 @@
+#!/system/bin/sh
+# CGI executor for the module's local WebUI server (busybox httpd).
+# Reads a shell command from the POST body, runs it as root, and replies
+# with "<exit code>\n<combined output>". The server binds to 127.0.0.1 only.
+
+printf 'HTTP/1.1 200 OK\r\n'
+printf 'Content-Type: text/plain; charset=utf-8\r\n'
+printf 'Access-Control-Allow-Origin: *\r\n'
+printf 'Cache-Control: no-store\r\n\r\n'
+
+length="${CONTENT_LENGTH:-0}"
+case "$length" in
+  ''|*[!0-9]*) length=0 ;;
+esac
+
+command="$(dd bs=1 count="$length" 2>/dev/null)"
+case "$command" in
+  *[![:space:]]*) ;;
+  *) printf '1\nempty command\n'; exit 0 ;;
+esac
+
+output="$(sh -c "$command" 2>&1)"
+code=$?
+printf '%s\n%s\n' "$code" "$output"
+exit 0
