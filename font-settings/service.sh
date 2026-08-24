@@ -8,6 +8,15 @@ while [ "$(getprop sys.boot_completed)" != "1" ] && [ "$count" -lt 180 ]; do
 done
 rm -f "$MODDIR/data/pending_reboot"
 
+# Self-heal an install that skipped customize.sh: restore executable bits
+# and regenerate the font config backup so the WebUI never ends up
+# reporting connection failures over missing permissions.
+chmod 0755 "$MODDIR/tools/fontctl.sh" "$MODDIR/tools/fontconfig.sh" \
+  "$MODDIR/webroot/cgi-bin/exec" 2>/dev/null
+if [ ! -d "$MODDIR/config/original" ] || [ ! -s "$MODDIR/data/font-configs.list" ]; then
+  sh "$MODDIR/tools/fontconfig.sh" prepare >/dev/null 2>&1
+fi
+
 # Local WebUI server: lets any browser open the module UI at
 # http://127.0.0.1:7125 even without a WebUI host (e.g. on Magisk).
 # The /cgi-bin/exec endpoint runs POSTed shell commands as root.

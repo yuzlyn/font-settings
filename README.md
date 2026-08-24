@@ -1,15 +1,17 @@
 # Font Settings
 
 - 作者：**yuzlyn**
-- 版本：**v2.3.4**
+- 版本：**v2.3.5**
 - 模块 ID：`font-settings`
 
 这是一个适用于 Android 8.0+ 的通用 KernelSU 字体模块，不限定手机品牌或 ROM。模块提供离线 WebUI，中文与西文各自可上传多个 `.ttf` 字体并按顺序组成 font-family 回退链（缺字自动回退，支持拖拽排序），上传可变字体后可调节 `100`–`900` 字重，并可选择内置 iOS、Google、Blobmoji、Facebook Emoji 或上传自定义 `.ttf/.otf`。所有替换均通过 KernelSU systemless mount 生效，不直接修改系统分区。
 
 ## 下载
 
-- 完整包：[font-settings_v2.3.4_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.3.4/font-settings_v2.3.4_KSU.zip)，`178,714,653` 字节，SHA-256：`AC095A6903854A79F6178116F0B2B53A7BFF1E02E6154716733471BB20C4560D`。
-- 精简包：[font-settings_v2.3.4_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.3.4/font-settings_v2.3.4_lite_KSU.zip)，`32,993,926` 字节，SHA-256：`61F7DC341A55CD0308ADDE6C027B6C6A81F54912517518AE5AD332645CA3D48C`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+- 完整包：[font-settings_v2.3.5_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.3.5/font-settings_v2.3.5_KSU.zip)，`178,714,865` 字节，SHA-256：`19AD5E2D4F50BCEC93AA5DB76B6947E9CBB0EC61870CCF853D446CE470508309`。
+- 精简包：[font-settings_v2.3.5_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.3.5/font-settings_v2.3.5_lite_KSU.zip)，`32,994,138` 字节，SHA-256：`95438CC790BD5BD76578957E91471473B662B5F32B1208A03597249BF3CD7000`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+
+v2.3.5 修复个别设备安装后 WebUI 显示“KernelSU 连接失败”的问题。根因是安装时 `customize.sh` 未执行（模块文件保持打包时的默认权限），`tools/fontctl.sh` 与 `webroot/cgi-bin/exec` 没有可执行位，WebUI 每次调用都以“Permission denied”失败，同时字体配置备份与 Emoji/字号等设置也没有保留。现在 `service.sh` 开机后自愈：自动恢复关键脚本的可执行位，并在字体配置备份缺失时重新生成，即使安装过程异常也能保证 WebUI 正常连接。如果你的手机出现该症状，安装 v2.3.5 并重启一次即可恢复；已丢失的上传字体和 Emoji 设置需要重新上传。
 
 v2.3.4 修复 v2.3.3 的两个问题，并让 Magisk 不依赖任何第三方应用即可打开 WebUI。KernelSU 官方 WebUI 与 KsuWebUIStandalone、MMRL 一样都从 `mui.kernelsu.org` 加载页面，因此 v2.3.3 按域名判断文件选择器不可用的做法会误伤 KernelSU，导致“添加字体”弹出路径导入对话框而不是系统选择器；现在改为动态探测——点击“添加字体”后先尝试打开系统选择器，只有宿主静默忽略（约 1 秒内没有任何页面可见性/取消/变更信号，典型是 Magisk 上的 KsuWebUIStandalone 或 MMRL）时才回退到路径导入对话框，KernelSU、APatch 原生 WebUI 和浏览器保持一键选择器。模块新增内置本机 WebUI 服务：开机后由 `service.sh` 用 busybox httpd 监听 `127.0.0.1:7125`，任何浏览器打开 `http://127.0.0.1:7125` 即可使用完整功能（页面在缺少 KernelSU bridge 时自动改用 `POST /cgi-bin/exec` 执行 root 命令）；Magisk 用户无需安装 KsuWebUIStandalone 或 MMRL，KernelSU 用户也可以直接在浏览器中操作。
 
@@ -142,7 +144,7 @@ WebUI 通过 root bridge 读取 `theme_customization_overlay_packages` 中的 Mo
 - 可变字体字重以 `data/<role>.weight` 保存，范围 `100` 到 `900`，默认 `400`。生成器为可变字体的每个槽位把 `wght` 轴值改写为“原槽位字重 + 设定字重 − 400”并钳制到 `100`–`900`，静态字体节点不受影响。
 - 浏览器以 80 KiB 分块通过 KernelSU root bridge 写入临时文件；两端都支持时使用 gzip 压缩传输（`base64 -d | gzip -dc` 解压追加），否则回退原始 base64 分块。分块大小保证编码后的指令长度低于 `execve` 的 128 KiB 参数上限。
 - 路径导入时，页面先经 root bridge 以 `stat` 校验文件并以 `base64` 读回字节，再复用与系统选择器相同的校验、cmap 隔离与分块上传管线。
-- `service.sh` 开机后启动内置 WebUI 服务：busybox httpd 只绑定 `127.0.0.1:7125`，根目录为模块 `webroot`；busybox 依次探测 Magisk（`/data/adb/magisk/busybox`）、KernelSU（`/data/adb/ksu/bin/busybox`）与 APatch（`/data/adb/ap/bin/busybox`）位置。
+- `service.sh` 开机后启动内置 WebUI 服务：busybox httpd 只绑定 `127.0.0.1:7125`，根目录为模块 `webroot`；busybox 依次探测 Magisk（`/data/adb/magisk/busybox`）、KernelSU（`/data/adb/ksu/bin/busybox`）与 APatch（`/data/adb/ap/bin/busybox`）位置。启动时还会自愈：恢复 `fontctl.sh`、`fontconfig.sh` 与 `cgi-bin/exec` 的可执行位，并在字体配置备份缺失时重新捕获系统字体 XML。
 - 页面通过 `window.ksu` 探测桥接能力：缺少 KernelSU bridge（如用浏览器访问内置服务）时，自动改用 `POST http://127.0.0.1:7125/cgi-bin/exec`，由 busybox httpd 的 CGI 以 root 执行命令并返回“退出码 + 输出”。
 - 点击“添加字体”先尝试系统文件选择器；宿主约 1 秒内没有任何页面可见性/取消/变更信号（未实现 `onShowFileChooser`）时才回退到路径导入对话框。
 - 上传前由浏览器重建字体的 Unicode `cmap` 并重算 SFNT 校验和；其他字体表和字形数据保持不变。
@@ -236,7 +238,7 @@ sh tests/fontconfig-test.sh
 .\package-font-settings.ps1 -Edition lite
 ```
 
-本版本已在 OPPO PHY110（Android 16 / API 36 / KernelSU 3.2.4）实机验证：动态生成的字体配置可解析且 magic mount 生效、无 minikin/font 报错；中英文字体链的添加、删除、排序与缺字回退后端命令均通过；v2.3.3 新增的字重偏移、钳制与非法值回退通过 fontconfig 夹具测试，`weight-set` 写入、状态回读与字体配置重生成在设备上验证；v2.3.4 的内置 WebUI 服务（busybox httpd 静态页面与 `POST /cgi-bin/exec` 执行、`fontctl status` 回读）在设备上实测通过，Playwright 冒烟覆盖了浏览器模式 HTTP 桥、宿主无文件选择器时的回退对话框、路径导入与选择器正常打开时的抑制逻辑；所有 shell 脚本通过 `sh -n` 语法检查。
+本版本已在 OPPO PHY110（Android 16 / API 36 / KernelSU 3.2.4）实机验证：动态生成的字体配置可解析且 magic mount 生效、无 minikin/font 报错；中英文字体链的添加、删除、排序与缺字回退后端命令均通过；字重偏移、钳制与非法值回退通过 fontconfig 夹具测试，`weight-set` 写入、状态回读与字体配置重生成在设备上验证；内置 WebUI 服务（busybox httpd 静态页面与 `POST /cgi-bin/exec` 执行、`fontctl status` 回读）在设备上实测通过，v2.3.5 的自愈流程（修复可执行位、重生成字体配置备份）在真实“安装异常”现场验证；Playwright 冒烟覆盖了浏览器模式 HTTP 桥、宿主无文件选择器时的回退对话框、路径导入与选择器正常打开时的抑制逻辑；所有 shell 脚本通过 `sh -n` 语法检查。
 
 ## 许可与来源
 
