@@ -45,6 +45,14 @@ if [ -f "$OLDMOD/data/fallback" ]; then
   cp -af "$OLDMOD/data/fallback" "$MODPATH/data/fallback"
 fi
 
+# 保留可变字体字重设置，避免更新时被重置。
+for file in chinese.weight western.weight; do
+  if [ -f "$OLDMOD/data/$file" ]; then
+    mkdir -p "$MODPATH/data"
+    cp -af "$OLDMOD/data/$file" "$MODPATH/data/$file"
+  fi
+done
+
 config_result="$(sh "$MODPATH/tools/fontconfig.sh" prepare 2>&1)"
 if [ "$?" -ne 0 ]; then
   ui_print "! 无法适配此设备的字体配置"

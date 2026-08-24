@@ -362,6 +362,83 @@ for (const viewport of viewports) {
   }
 }
 
+const cacheContext = await browser.newContext({
+  viewport: { width: 390, height: 844 },
+  colorScheme: "light",
+});
+const cachePage = await cacheContext.newPage();
+const cacheErrors = [];
+cachePage.on("pageerror", (error) => cacheErrors.push(error.message));
+await cachePage.addInitScript(() => {
+  const cacheKey = "font-settings.monet-seed.v1";
+  if (!sessionStorage.getItem("theme-cache-test-ready")) {
+    localStorage.setItem(cacheKey, "#aa2200");
+    sessionStorage.setItem("theme-cache-test-ready", "1");
+  }
+  let monetWrites = 0;
+  const originalSetProperty = CSSStyleDeclaration.prototype.setProperty;
+  CSSStyleDeclaration.prototype.setProperty = function (name, ...args) {
+    if (name === "--monet-seed" && this === document.documentElement.style) monetWrites += 1;
+    return originalSetProperty.call(this, name, ...args);
+  };
+  window.__monetWrites = () => monetWrites;
+  window.ksu = {
+    exec(command, options, callbackName) {
+      let output = "ok";
+      let delay = 0;
+      if (command.includes("modules_update")) output = "/data/adb/modules/font-settings";
+      if (command.includes("theme_customization_overlay_packages")) {
+        output = JSON.stringify({ "android.theme.customization.system_palette": "FF008855" });
+        delay = 300;
+      }
+      if (command.endsWith(" status")) output = [
+        "module=ok",
+        "chinese_size=1",
+        "western_size=1",
+        "emoji_mode=default",
+        "western_targets=1",
+        "chinese_targets=1",
+        "pending_reboot=0",
+        "conflicts=",
+      ].join("\n");
+      setTimeout(() => window[callbackName](0, output, ""), delay);
+    },
+  };
+});
+await cachePage.goto(pageUrl);
+const cachedFirstPaint = await cachePage.evaluate(() => ({
+  seed: window.FontSettingsTheme.getSeed(),
+  cssSeed: getComputedStyle(document.documentElement).getPropertyValue("--monet-seed").trim(),
+  source: document.documentElement.dataset.colorSource,
+  writes: window.__monetWrites(),
+}));
+if (cachedFirstPaint.seed !== "#aa2200" || cachedFirstPaint.cssSeed !== "#aa2200" || cachedFirstPaint.source !== "cache" || cachedFirstPaint.writes !== 1) {
+  throw new Error(`cached first paint mismatch: ${JSON.stringify(cachedFirstPaint)}`);
+}
+await cachePage.waitForFunction(() => window.FontSettingsTheme.getSeed() === "#008855");
+const changedTheme = await cachePage.evaluate(() => ({
+  seed: window.FontSettingsTheme.getSeed(),
+  cached: localStorage.getItem(window.FontSettingsTheme.CACHE_KEY),
+  writes: window.__monetWrites(),
+}));
+if (changedTheme.cached !== "#008855" || changedTheme.writes !== 2) {
+  throw new Error(`changed theme cache mismatch: ${JSON.stringify(changedTheme)}`);
+}
+
+await cachePage.reload();
+await cachePage.waitForTimeout(450);
+const unchangedTheme = await cachePage.evaluate(() => ({
+  seed: window.FontSettingsTheme.getSeed(),
+  cached: localStorage.getItem(window.FontSettingsTheme.CACHE_KEY),
+  writes: window.__monetWrites(),
+  source: document.documentElement.dataset.colorSource,
+}));
+if (cacheErrors.length || unchangedTheme.seed !== "#008855" || unchangedTheme.cached !== "#008855" || unchangedTheme.writes !== 1 || unchangedTheme.source !== "monet") {
+  throw new Error(`unchanged theme cache mismatch: ${JSON.stringify({ cacheErrors, unchangedTheme })}`);
+}
+console.log("theme cache: cached first paint and change-only refresh verified");
+await cacheContext.close();
+
 const localeCases = [
   {
     browserLocale: "zh-CN",
@@ -584,22 +661,27 @@ for (const viewport of viewports) {
           width: rect.width,
           height: rect.height,
           objectFit: getComputedStyle(image).objectFit,
-          bottom: rect.bottom,
+          buttonLabel: figure.querySelector("button").getAttribute("aria-label"),
         };
       });
-      const divider = document.querySelector(".payment-divider").getBoundingClientRect();
-      const token = document.querySelector(".token-support").getBoundingClientRect();
+      const card = document.querySelector(".donate-card");
+      const grid = document.querySelector(".payment-grid");
       return {
         lang: document.documentElement.lang,
         title: document.title,
         h1: document.querySelector("h1").textContent,
-        paymentLabel: document.querySelector(".payment-list").getAttribute("aria-label"),
+        paymentLabel: card.getAttribute("aria-label"),
         backLabel: document.querySelector("#about-back").getAttribute("aria-label"),
         backTitle: document.querySelector("#about-back").getAttribute("title"),
         figures,
-        divider: { width: divider.width, height: divider.height },
-        tokenText: document.querySelector(".token-support").textContent,
-        tokenTop: token.top,
+        heading: card.querySelector("h2").textContent,
+        cardRadius: parseFloat(getComputedStyle(card).borderTopLeftRadius),
+        gridColumns: getComputedStyle(grid).gridTemplateColumns.split(" ").length,
+        previewHidden: document.querySelector("#payment-preview").hidden,
+        confirmationHidden: document.querySelector("#donate-confirm").hidden,
+        hasKofi: document.body.innerText.includes("Ko-fi"),
+        thanks: document.querySelector(".donate-thanks").textContent,
+        previewImage: document.querySelector("#payment-preview img"),
         scrollWidth: document.documentElement.scrollWidth,
         viewport: innerWidth,
       };
@@ -613,19 +695,36 @@ for (const viewport of viewports) {
     if (!donate.paymentLabel || !donate.backLabel || donate.backLabel !== donate.backTitle || donate.figures.length !== 2) {
       throw new Error(`${testName} structure or accessibility mismatch: ${JSON.stringify(donate)}`);
     }
-    if (donate.figures[0].label !== localeCase.alipay || donate.figures[1].label !== localeCase.wechat || donate.figures.some((figure) => !figure.alt)) {
+    if (donate.figures[0].label !== (localeCase.expectedLang === "en-US" ? "WeChat reward" : "微信" + (localeCase.expectedLang === "zh-TW" ? "贊賞" : "赞赏")) || donate.figures[1].label !== localeCase.alipay || donate.figures.some((figure) => !figure.alt || !figure.buttonLabel)) {
       throw new Error(`${testName} payment labels mismatch: ${JSON.stringify(donate)}`);
     }
     for (const figure of donate.figures) {
       const renderedRatio = figure.width / figure.height;
-      const naturalRatio = figure.naturalWidth / figure.naturalHeight;
-      if (!figure.loaded || figure.objectFit !== "contain" || Math.abs(renderedRatio - naturalRatio) > 0.01 || figure.width > 420.5 || figure.width > donate.viewport * 0.83) {
+      if (!figure.loaded || figure.objectFit !== "contain" || Math.abs(renderedRatio - 1) > 0.01 || figure.width > donate.viewport * 0.5) {
         throw new Error(`${testName} payment image mismatch: ${JSON.stringify(donate)}`);
       }
     }
-    if (donate.divider.height !== 1 || donate.divider.width <= donate.figures[0].width || donate.tokenText !== "token支援" || donate.tokenTop <= donate.figures[1].bottom) {
-      throw new Error(`${testName} divider or token placement mismatch: ${JSON.stringify(donate)}`);
+    if (!donate.heading || donate.cardRadius < 24 || donate.gridColumns !== 2 || !donate.previewHidden || !donate.confirmationHidden || donate.hasKofi || !donate.thanks) {
+      throw new Error(`${testName} donation card mismatch: ${JSON.stringify(donate)}`);
     }
+    await page.click("[data-payment-preview]");
+    const confirmation = await page.evaluate(() => {
+      const dialog = document.querySelector("#donate-confirm");
+      return { hidden: dialog.hidden, text: dialog.textContent, previewHidden: document.querySelector("#payment-preview").hidden };
+    });
+    if (confirmation.hidden || !confirmation.previewHidden || !confirmation.text.trim()) {
+      throw new Error(`${testName} donation confirmation mismatch: ${JSON.stringify(confirmation)}`);
+    }
+    await page.click(".donate-confirm-accept");
+    const preview = await page.evaluate(() => {
+      const overlay = document.querySelector("#payment-preview");
+      const image = overlay.querySelector("img");
+      return { hidden: overlay.hidden, loaded: image.complete && image.naturalWidth > 0, alt: image.alt };
+    });
+    if (preview.hidden || !preview.loaded || !preview.alt) {
+      throw new Error(`${testName} payment preview mismatch: ${JSON.stringify(preview)}`);
+    }
+    await page.click(".payment-preview-close");
     if (donate.scrollWidth > donate.viewport) {
       throw new Error(`${testName} horizontal overflow: ${JSON.stringify(donate)}`);
     }

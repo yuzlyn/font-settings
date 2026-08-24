@@ -50,4 +50,24 @@ printf '100\n' > "$MODULE_DIR/data/western.size"
 FONT_CONFIG_ROOT="$TEST_DIR/fontconfig-fixture" sh "$MODULE_DIR/tools/fontconfig.sh" apply >/dev/null
 ! grep -q 'size="100"' "$MODULE_DIR/system/etc/fonts.xml"
 
+# Variable font weight shift: 400 is the identity; other values shift every
+# slot's wght axis value and clamp into the 100-900 range.
+printf '1\n' > "$MODULE_DIR/data/chinese.variable"
+printf '1\n' > "$MODULE_DIR/data/western.variable"
+printf '700\n' > "$MODULE_DIR/data/western.weight"
+printf '300\n' > "$MODULE_DIR/data/chinese.weight"
+FONT_CONFIG_ROOT="$TEST_DIR/fontconfig-fixture" sh "$MODULE_DIR/tools/fontconfig.sh" apply >/dev/null
+grep -q '<axis tag="wght" stylevalue="900"/>' "$SYSTEM_OUTPUT"
+grep -q '<axis tag="wght" stylevalue="300"/>' "$SYSTEM_OUTPUT"
+# The unshifted 700 slot must survive when only the 400 slot moves to 700.
+[ "$(grep -c '<axis tag="wght" stylevalue="700"/>' "$SYSTEM_OUTPUT")" -eq 1 ]
+
+# Non-numeric weight values fall back to the identity.
+printf 'abc\n' > "$MODULE_DIR/data/western.weight"
+printf 'abc\n' > "$MODULE_DIR/data/chinese.weight"
+FONT_CONFIG_ROOT="$TEST_DIR/fontconfig-fixture" sh "$MODULE_DIR/tools/fontconfig.sh" apply >/dev/null
+grep -q '<axis tag="wght" stylevalue="400"/>' "$SYSTEM_OUTPUT"
+grep -q '<axis tag="wght" stylevalue="700"/>' "$SYSTEM_OUTPUT"
+! grep -q '<axis tag="wght" stylevalue="900"/>' "$SYSTEM_OUTPUT"
+
 echo "fontconfig fixtures: passed"

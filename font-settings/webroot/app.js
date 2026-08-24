@@ -108,6 +108,17 @@ const TRANSLATIONS = {
     fontFileMissing: "字体文件缺失",
     variableFont: "可变字体",
     staticFont: "静态字体",
+    fontWeight: "字重",
+    weightSaved: "字重已设为 {weight}",
+    weightFailed: "字重设置失败",
+    pathImportLabel: "字体文件路径",
+    pathImportHint: "在文件管理器中复制字体路径后粘贴到此处（如 /sdcard/Download/font.ttf）",
+    importFromPath: "从路径导入",
+    chooseFromPicker: "打开文件选择器",
+    pickerUnavailable: "此环境未响应文件选择器，请改用路径导入",
+    pathImportInvalid: "请输入以 / 开头的绝对路径",
+    pathImportNotFound: "未找到该文件，请检查路径",
+    pathImportReading: "正在读取文件",
     kernelSUConnected: "KernelSU 已连接",
     configSavedRestart: "已适配 {western} 项西文和 {chinese} 项中文字体映射，重启后生效",
     configLoaded: "已加载 {western} 项西文和 {chinese} 项中文字体映射",
@@ -227,6 +238,17 @@ const TRANSLATIONS = {
     fontFileMissing: "字型檔案缺失",
     variableFont: "可變字型",
     staticFont: "靜態字型",
+    fontWeight: "字重",
+    weightSaved: "字重已設為 {weight}",
+    weightFailed: "字重設定失敗",
+    pathImportLabel: "字型檔案路徑",
+    pathImportHint: "在檔案管理器中複製字型路徑後貼到此處（如 /sdcard/Download/font.ttf）",
+    importFromPath: "從路徑匯入",
+    chooseFromPicker: "開啟檔案選擇器",
+    pickerUnavailable: "此環境未回應檔案選擇器，請改從路徑匯入",
+    pathImportInvalid: "請輸入以 / 開頭的絕對路徑",
+    pathImportNotFound: "找不到該檔案，請檢查路徑",
+    pathImportReading: "正在讀取檔案",
     kernelSUConnected: "KernelSU 已連線",
     configSavedRestart: "已調整 {western} 個西文與 {chinese} 個中文字型對應項目，重新啟動後生效",
     configLoaded: "已載入 {western} 個西文與 {chinese} 個中文字型對應項目",
@@ -346,6 +368,17 @@ const TRANSLATIONS = {
     fontFileMissing: "Font file missing",
     variableFont: "Variable font",
     staticFont: "Static font",
+    fontWeight: "Font weight",
+    weightSaved: "Font weight set to {weight}",
+    weightFailed: "Could not set font weight",
+    pathImportLabel: "Font file path",
+    pathImportHint: "If the file picker is unavailable, copy the font path in a file manager and paste it here (e.g. /sdcard/Download/font.ttf)",
+    importFromPath: "Import from path",
+    chooseFromPicker: "Open file picker",
+    pickerUnavailable: "The file picker did not open here. Import from a path instead.",
+    pathImportInvalid: "Enter an absolute path starting with /",
+    pathImportNotFound: "File not found. Check the path.",
+    pathImportReading: "Reading file",
     kernelSUConnected: "KernelSU connected",
     configSavedRestart: "Adapted {western} Latin and {chinese} Chinese font entries. Restart to apply.",
     configLoaded: "Loaded {western} Latin and {chinese} Chinese font entries",
@@ -385,7 +418,7 @@ function applyTranslations() {
   for (const element of document.querySelectorAll("[data-i18n]")) {
     element.textContent = t(element.dataset.i18n);
   }
-  const attributes = ["aria-label", "title", "alt", "headline", "description"];
+  const attributes = ["aria-label", "title", "alt", "headline", "description", "label"];
   for (const attribute of attributes) {
     const datasetName = `i18n${attribute.split("-").map((part) => part[0].toUpperCase() + part.slice(1)).join("")}`;
     for (const element of document.querySelectorAll(`[data-i18n-${attribute}]`)) {
@@ -423,6 +456,9 @@ const roles = {
     progress: document.querySelector("#chinese-progress"),
     chain: document.querySelector("#chinese-chain"),
     count: document.querySelector("#chinese-count"),
+    weightContainer: document.querySelector("#chinese-weight-control"),
+    weight: document.querySelector("#chinese-weight"),
+    weightValue: document.querySelector("#chinese-weight-value"),
   },
   western: {
     fileInput: document.querySelector("#western-file"),
@@ -430,6 +466,9 @@ const roles = {
     progress: document.querySelector("#western-progress"),
     chain: document.querySelector("#western-chain"),
     count: document.querySelector("#western-count"),
+    weightContainer: document.querySelector("#western-weight-control"),
+    weight: document.querySelector("#western-weight"),
+    weightValue: document.querySelector("#western-weight-value"),
   },
 };
 
@@ -450,6 +489,17 @@ const westernSize = document.querySelector("#western-size");
 const westernSizeValue = document.querySelector("#western-size-value");
 const fallbackSwitch = document.querySelector("#fallback-switch");
 const fallbackStatus = document.querySelector("#fallback-status");
+const fontSourceDialog = document.querySelector("#font-source-dialog");
+const fontPathInput = document.querySelector("#font-path-input");
+const fontPickerFallback = document.querySelector("#font-picker-fallback");
+const cancelFontSource = document.querySelector("#cancel-font-source");
+const confirmFontPath = document.querySelector("#confirm-font-path");
+// KernelSU and APatch serve the WebUI on loopback, where the system file
+// picker works. KsuWebUIStandalone and MMRL load it from mui.kernelsu.org
+// without a WebChromeClient, so <input type="file"> clicks are silently
+// ignored there; route those hosts through the path-import dialog instead.
+const nativeWebUI = ["127.0.0.1", "localhost", "[::1]"].includes(window.location.hostname);
+let pendingFontTarget = null;
 const topAppBar = document.querySelector("mdui-top-app-bar");
 const compactTitle = document.querySelector("#compact-title");
 const largeTitle = document.querySelector(".large-title");
@@ -650,6 +700,31 @@ function normalizeWesternSize(value) {
   return Math.max(20, Math.min(100, size));
 }
 
+function normalizeFontWeight(value) {
+  const weight = Math.round(Number(value) || 400);
+  return Math.max(100, Math.min(900, Math.round(weight / 50) * 50));
+}
+
+function shellQuote(value) {
+  return `'${String(value).replaceAll("'", `'\\''`)}'`;
+}
+
+// Wraps an in-memory byte array into the minimal file-like object that
+// inspectFont/uploadFont/uploadEmojiFont rely on (name, size, slice,
+// arrayBuffer), so path imports can reuse the exact same pipeline as files
+// coming from the picker.
+function memoryFile(name, bytes) {
+  return {
+    name,
+    size: bytes.byteLength,
+    slice(start = 0, end = bytes.byteLength) {
+      const part = bytes.subarray(start, end).slice();
+      return { arrayBuffer: async () => part.buffer };
+    },
+    arrayBuffer: async () => bytes.slice().buffer,
+  };
+}
+
 function showMessage(message) {
   snackbar.textContent = message;
   snackbar.open = true;
@@ -820,6 +895,7 @@ function setBusy(role, busy) {
   for (const [name, item] of Object.entries(roles)) {
     item.button.disabled = busy;
     item.fileInput.disabled = busy;
+    item.weight.disabled = busy || item.weightContainer.classList.contains("hidden");
     if (name !== role && !busy) item.progress.classList.add("hidden");
   }
   current.progress.classList.toggle("hidden", !busy);
@@ -841,6 +917,9 @@ function setEmojiBusy(busy) {
   emojiFile.disabled = busy;
   westernSize.disabled = busy;
   fallbackSwitch.disabled = busy;
+  for (const item of Object.values(roles)) {
+    item.weight.disabled = busy || item.weightContainer.classList.contains("hidden");
+  }
   setChainButtonsDisabled(busy);
   emojiProgress.classList.toggle("hidden", !busy);
   if (busy) setProgress(emojiProgress, 0);
@@ -882,6 +961,76 @@ async function uploadRoleBytes(role, bytes, variable, name, slotName) {
     ? `${fontctl} replace ${role} ${slotName} ${bytes.byteLength} ${variable} ${name}`
     : `${fontctl} commit ${role} ${bytes.byteLength} ${variable} ${name}`;
   assertCommand(await exec(finish), slotName ? "replace" : "commit");
+}
+
+function openFontSource(target) {
+  pendingFontTarget = target;
+  fontPathInput.value = "";
+  fontSourceDialog.headline = t(target === "emoji" ? "chooseTtfOrOtf" : "addFont");
+  fontSourceDialog.open = true;
+}
+
+function attemptPickerFallback() {
+  const target = pendingFontTarget;
+  if (!target) return;
+  const input = target === "emoji" ? emojiFile : roles[target].fileInput;
+  let opened = false;
+  const mark = () => {
+    opened = true;
+    cleanup();
+    fontSourceDialog.open = false;
+  };
+  const cleanup = () => {
+    input.removeEventListener("change", mark);
+    document.removeEventListener("visibilitychange", mark);
+    window.clearTimeout(timer);
+  };
+  const timer = window.setTimeout(() => {
+    cleanup();
+    if (!opened) showMessage(t("pickerUnavailable"));
+  }, 1200);
+  input.addEventListener("change", mark);
+  document.addEventListener("visibilitychange", mark);
+  input.click();
+}
+
+async function importFontFromPath(target, rawPath) {
+  if (!target) return;
+  const path = String(rawPath || "").trim();
+  if (!path.startsWith("/") || /[\r\n]/.test(path)) {
+    showMessage(t("pathImportInvalid"));
+    return;
+  }
+  if (uploadInProgress) return;
+  const quoted = shellQuote(path);
+  const fontRole = target === "emoji" ? null : target;
+
+  showMessage(t("pathImportReading"));
+  try {
+    const statResult = await exec(
+      `if [ -f ${quoted} ]; then stat -c %s ${quoted}; else echo missing; fi`,
+      { timeout: 15000 },
+    );
+    if (statResult === "missing" || !/^\d+$/.test(statResult)) {
+      throw new Error(t("pathImportNotFound"));
+    }
+    const size = Number(statResult);
+    if (size <= 0 || size > 512 * 1024 * 1024) {
+      throw new Error(t("fontSizeError"));
+    }
+    const encoded = await exec(`base64 ${quoted}`, { timeout: 300000 });
+    const bytes = base64ToBytes(encoded);
+    if (bytes.byteLength !== size) {
+      throw new Error(t("pathImportNotFound"));
+    }
+    const name = path.split("/").pop() || "font.ttf";
+    const file = memoryFile(name, bytes);
+    if (fontRole) await uploadFont(fontRole, file);
+    else await uploadEmojiFont(file);
+    fontSourceDialog.open = false;
+  } catch (error) {
+    showMessage(formatFontError(error) || t("pathImportFailed"));
+  }
 }
 
 async function uploadFont(role, file) {
@@ -1044,7 +1193,8 @@ async function applyEmojiMode(mode) {
   if (uploadInProgress || mode === "custom") {
     if (mode === "custom" && !uploadInProgress) {
       emojiDialog.open = false;
-      emojiFile.click();
+      if (nativeWebUI) emojiFile.click();
+      else openFontSource("emoji");
     }
     return;
   }
@@ -1230,6 +1380,38 @@ function renderFallback(values) {
   fallbackStatus.textContent = t(enabled ? "fallbackOnDetail" : "fallbackOffDetail");
 }
 
+function renderFontWeight(role, values) {
+  const current = roles[role];
+  const chain = latestChains[role] || [];
+  const hasVariable = chain.some((font) => font.variable);
+  current.weightContainer.classList.toggle("hidden", !hasVariable);
+  current.weight.disabled = uploadInProgress;
+  const weight = normalizeFontWeight(values[`${role}_weight`]);
+  current.weight.value = String(weight);
+  current.weightValue.textContent = String(weight);
+}
+
+async function applyFontWeight(role) {
+  if (uploadInProgress) return;
+  const current = roles[role];
+  const weight = normalizeFontWeight(current.weight.value);
+  current.weight.value = String(weight);
+  current.weightValue.textContent = String(weight);
+  uploadInProgress = true;
+  setBusy(role, true);
+  try {
+    assertCommand(await exec(`${fontctl} weight-set ${role} ${weight}`), "weight");
+    showMessage(t("weightSaved", { weight }));
+    await refreshStatus();
+  } catch (error) {
+    showMessage(formatFontError(error) || t("weightFailed"));
+    await refreshStatus();
+  } finally {
+    uploadInProgress = false;
+    setBusy(role, false);
+  }
+}
+
 async function applyWesternSize() {
   const size = normalizeWesternSize(westernSize.value);
   const previousSize = normalizeWesternSize(latestStatus.western_scale);
@@ -1303,6 +1485,8 @@ async function refreshStatus() {
     renderChain("chinese", values);
     renderChain("western", values);
     renderWesternSize(values);
+    renderFontWeight("chinese", values);
+    renderFontWeight("western", values);
     renderFallback(values);
     renderEmoji(values);
 
@@ -1352,11 +1536,18 @@ function initialize() {
   updateTopBarTitle();
 
   for (const [role, current] of Object.entries(roles)) {
-    current.button.addEventListener("click", () => current.fileInput.click());
+    current.button.addEventListener("click", () => {
+      if (nativeWebUI) current.fileInput.click();
+      else openFontSource(role);
+    });
     current.fileInput.addEventListener("change", () => {
       const [file] = current.fileInput.files;
       if (file) uploadFont(role, file);
     });
+    current.weight.addEventListener("input", () => {
+      current.weightValue.textContent = String(normalizeFontWeight(current.weight.value));
+    });
+    current.weight.addEventListener("change", () => applyFontWeight(role));
   }
 
   for (const input of emojiOptions.querySelectorAll('input[name="emoji-mode"]')) {
@@ -1372,6 +1563,16 @@ function initialize() {
   });
   document.querySelector("#close-emoji-dialog").addEventListener("click", () => {
     emojiDialog.open = false;
+  });
+  cancelFontSource.addEventListener("click", () => {
+    fontSourceDialog.open = false;
+  });
+  fontPickerFallback.addEventListener("click", attemptPickerFallback);
+  confirmFontPath.addEventListener("click", () => {
+    importFontFromPath(pendingFontTarget, fontPathInput.value);
+  });
+  fontPathInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") importFontFromPath(pendingFontTarget, fontPathInput.value);
   });
   emojiFile.addEventListener("change", () => {
     const [file] = emojiFile.files;

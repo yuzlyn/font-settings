@@ -31,7 +31,8 @@ function family_role(header, block,    name, lang, normalized) {
 }
 
 function emit_family(    header, block, role, indent, i, j, opening, weight,
-                         nslot, f, nf, file, variable, s, line, hdr) {
+                         nslot, f, nf, file, variable, s, line, hdr,
+                         role_weight, shifted) {
   header = ""
   block = ""
   for (i = 1; i <= family_count; i++) {
@@ -86,9 +87,11 @@ function emit_family(    header, block, role, indent, i, j, opening, weight,
   if (role == "western") {
     nf = split(western_list, files, ",")
     split(western_vars, vars, ",")
+    role_weight = western_weight
   } else {
     nf = split(chinese_list, files, ",")
     split(chinese_vars, vars, ",")
+    role_weight = chinese_weight
   }
   if (nf > max_fonts) nf = max_fonts
 
@@ -110,7 +113,12 @@ function emit_family(    header, block, role, indent, i, j, opening, weight,
       print line
       print indent "        " file
       if (variable == 1) {
-        print indent "        <axis tag=\"wght\" stylevalue=\"" slot_weight[s] "\"/>"
+        shifted = slot_weight[s]
+        if (shifted !~ /^[0-9]+$/) shifted = 400
+        shifted = shifted + (role_weight - 400)
+        if (shifted < 100) shifted = 100
+        if (shifted > 900) shifted = 900
+        print indent "        <axis tag=\"wght\" stylevalue=\"" shifted "\"/>"
       }
       print indent "    </font>"
     }
@@ -136,6 +144,12 @@ BEGIN {
   chinese_fonts = 0
   unnamed_default = 0
   if (max_fonts == "") max_fonts = 8
+  if (chinese_weight !~ /^[0-9]+$/) chinese_weight = 400
+  if (chinese_weight < 100) chinese_weight = 100
+  if (chinese_weight > 900) chinese_weight = 900
+  if (western_weight !~ /^[0-9]+$/) western_weight = 400
+  if (western_weight < 100) western_weight = 100
+  if (western_weight > 900) western_weight = 900
 }
 
 {

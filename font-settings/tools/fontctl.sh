@@ -138,6 +138,16 @@ read_fallback() {
   echo "$value"
 }
 
+read_weight() {
+  value="$(cat "$1" 2>/dev/null)"
+  case "$value" in
+    ''|*[!0-9]*) value=400 ;;
+  esac
+  [ "$value" -ge 100 ] 2>/dev/null || value=100
+  [ "$value" -le 900 ] 2>/dev/null || value=900
+  echo "$value"
+}
+
 read_emoji_mode() {
   mode="$(cat "$EMOJI_MODE_FILE" 2>/dev/null)"
   case "$mode" in
@@ -314,6 +324,8 @@ print_status() {
   echo "western_targets=$(cat "$DATA_DIR/western.targets" 2>/dev/null)"
   echo "chinese_targets=$(cat "$DATA_DIR/chinese.targets" 2>/dev/null)"
   echo "western_scale=$(read_percent "$WESTERN_SIZE_FILE")"
+  echo "chinese_weight=$(read_weight "$DATA_DIR/chinese.weight")"
+  echo "western_weight=$(read_weight "$DATA_DIR/western.weight")"
   echo "fallback=$(read_fallback "$FALLBACK_FILE")"
 
   [ -f "$DATA_DIR/pending_reboot" ] && echo "pending_reboot=1" || echo "pending_reboot=0"
@@ -544,6 +556,22 @@ set_fallback() {
   echo "ok=fallback"
 }
 
+set_font_weight() {
+  role="$1"
+  value="$2"
+  case "$role" in chinese|western) ;; *) fail "invalid_role" ;; esac
+  case "$value" in ''|*[!0-9]*) fail "invalid_weight" ;; esac
+  [ "$value" -ge 100 ] 2>/dev/null || fail "invalid_weight"
+  [ "$value" -le 900 ] 2>/dev/null || fail "invalid_weight"
+  mkdir -p "$DATA_DIR" || fail "mkdir_failed"
+  printf '%s\n' "$value" > "$DATA_DIR/$role.weight" || fail "weight_save_failed"
+  chmod 0644 "$DATA_DIR/$role.weight"
+  apply_config
+  touch "$DATA_DIR/pending_reboot"
+  sync
+  echo "ok=weight"
+}
+
 case "$1" in
   status) print_status ;;
   begin) begin_upload "$2" "$3" ;;
@@ -553,6 +581,7 @@ case "$1" in
   replace) replace_font "$2" "$3" "$4" "$5" "$6" ;;
   reorder) reorder_fonts "$2" "$3" "$4" "$5" "$6" "$7" "$8" "$9" ;;
   western-size) set_western_size "$2" ;;
+  weight-set) set_font_weight "$2" "$3" ;;
   fallback-set) set_fallback "$2" ;;
   emoji-set) apply_emoji "$2" ;;
   emoji-detect)

@@ -35,6 +35,16 @@ read_fallback() {
   echo "$value"
 }
 
+read_weight() {
+  value="$(cat "$1" 2>/dev/null)"
+  case "$value" in
+    ''|*[!0-9]*) value=400 ;;
+  esac
+  [ "$value" -ge 100 ] 2>/dev/null || value=100
+  [ "$value" -le 900 ] 2>/dev/null || value=900
+  echo "$value"
+}
+
 # Fills CHAIN_FILES / CHAIN_VARS with comma-joined ordered font names and
 # variable flags for a role. Falls back to the legacy single-font slot when the
 # chain list has not been created yet.
@@ -134,6 +144,8 @@ apply_configs() {
 
   western_size="$(read_percent "$DATA_DIR/western.size")"
   fallback="$(read_fallback "$DATA_DIR/fallback")"
+  chinese_weight="$(read_weight "$DATA_DIR/chinese.weight")"
+  western_weight="$(read_weight "$DATA_DIR/western.weight")"
   read_role_chain chinese
   chinese_files="$CHAIN_FILES"
   chinese_vars="$CHAIN_VARS"
@@ -158,6 +170,8 @@ apply_configs() {
       -v chinese_list="$chinese_files" \
       -v chinese_vars="$chinese_vars" \
       -v western_size="$western_size" \
+      -v chinese_weight="$chinese_weight" \
+      -v western_weight="$western_weight" \
       -v fallback="$fallback" \
       -v max_fonts="8" \
       -v allow_unnamed="$allow_unnamed" \

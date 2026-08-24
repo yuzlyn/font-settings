@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en-US" class="mdui-theme-auto">
   <head>
     <meta charset="UTF-8">
@@ -6,12 +6,12 @@
     <meta name="color-scheme" content="light dark">
     <title>Font settings</title>
     <link rel="stylesheet" href="vendor/mdui.css">
-    <link rel="stylesheet" href="styles.css?v=231">
+    <link rel="stylesheet" href="styles.css?v=233">
     <script src="vendor/mdui.global.js"></script>
     <script src="vendor/material-kolor.js"></script>
-    <script src="theme-cache.js?v=231"></script>
-    <script src="font-isolation.js?v=231" defer></script>
-    <script src="app.js?v=231" defer></script>
+    <script src="theme-cache.js?v=233"></script>
+    <script src="font-isolation.js?v=233" defer></script>
+    <script src="app.js?v=233" defer></script>
   </head>
   <body>
     <mdui-top-app-bar variant="small" scroll-behavior="elevate">
@@ -88,6 +88,13 @@
             <mdui-button id="chinese-upload" variant="tonal" class="select-button" data-i18n="addFont">Add font</mdui-button>
           </div>
           <div id="chinese-chain" class="font-chain" aria-live="polite"></div>
+          <div id="chinese-weight-control" class="font-size-control hidden">
+            <div class="font-size-copy">
+              <span data-i18n="fontWeight">字重</span>
+              <strong id="chinese-weight-value">400</strong>
+            </div>
+            <input id="chinese-weight" class="font-size-slider" type="range" min="100" max="900" step="50" value="400" aria-label="Font weight" data-i18n-aria-label="fontWeight">
+          </div>
           <mdui-linear-progress id="chinese-progress" class="font-progress hidden" value="0" role="progressbar" aria-label="Uploading Chinese font" data-i18n-aria-label="uploadingChineseFont" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></mdui-linear-progress>
           <input id="chinese-file" type="file" accept=".ttf,font/ttf" hidden>
         </mdui-card>
@@ -110,6 +117,13 @@
               <strong id="western-size-value">100%</strong>
             </div>
             <input id="western-size" class="font-size-slider" type="range" min="20" max="100" step="1" value="100" aria-label="Latin font size" data-i18n-aria-label="latinSize">
+          </div>
+          <div id="western-weight-control" class="font-size-control hidden">
+            <div class="font-size-copy">
+              <span data-i18n="fontWeight">字重</span>
+              <strong id="western-weight-value">400</strong>
+            </div>
+            <input id="western-weight" class="font-size-slider" type="range" min="100" max="900" step="50" value="400" aria-label="Font weight" data-i18n-aria-label="fontWeight">
           </div>
           <mdui-linear-progress id="western-progress" class="font-progress hidden" value="0" role="progressbar" aria-label="Uploading Latin font" data-i18n-aria-label="uploadingLatinFont" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></mdui-linear-progress>
           <input id="western-file" type="file" accept=".ttf,font/ttf" hidden>
@@ -246,7 +260,7 @@
       </a>
 
       <footer aria-label="Version information" data-i18n-aria-label="versionInfo">
-        <span>v2.2.7</span>
+        <span>v2.3.3</span>
         <span aria-hidden="true">·</span>
         <span>yuzlyn</span>
       </footer>
@@ -255,6 +269,16 @@
     <mdui-dialog id="reboot-dialog" headline="Restart device?" description="Unsaved app state will be lost. The new fonts will take effect after restart." data-i18n-headline="restartDialogHeadline" data-i18n-description="restartDialogDescription">
       <mdui-button slot="action" variant="text" id="cancel-reboot" data-i18n="cancel">Cancel</mdui-button>
       <mdui-button slot="action" variant="filled" id="confirm-reboot" data-i18n="restart">Restart</mdui-button>
+    </mdui-dialog>
+
+    <mdui-dialog id="font-source-dialog" headline="Add font" data-i18n-headline="addFont">
+      <div class="path-import">
+        <p class="path-import-hint" data-i18n="pathImportHint">If the file picker is unavailable, copy the font path in a file manager and paste it here.</p>
+        <mdui-text-field id="font-path-input" label="Font file path" data-i18n-label="pathImportLabel" clearable class="path-input"></mdui-text-field>
+      </div>
+      <mdui-button slot="action" variant="text" id="font-picker-fallback" data-i18n="chooseFromPicker">Open file picker</mdui-button>
+      <mdui-button slot="action" variant="text" id="cancel-font-source" data-i18n="cancel">Cancel</mdui-button>
+      <mdui-button slot="action" variant="filled" id="confirm-font-path" data-i18n="importFromPath">Import from path</mdui-button>
     </mdui-dialog>
 
     <mdui-dialog id="emoji-dialog" headline="Choose Emoji" data-i18n-headline="chooseEmoji">

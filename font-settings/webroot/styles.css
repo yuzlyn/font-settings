@@ -675,6 +675,21 @@ h2 {
   accent-color: rgb(var(--mdui-color-primary));
 }
 
+.path-import {
+  padding: 4px 0 8px;
+}
+
+.path-import-hint {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 18px;
+  color: rgb(var(--mdui-color-on-surface-variant));
+}
+
+.path-input {
+  width: 100%;
+}
+
 .message-card {
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr);
