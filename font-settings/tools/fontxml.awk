@@ -32,7 +32,7 @@ function family_role(header, block,    name, lang, normalized) {
 
 function emit_family(    header, block, role, indent, i, j, opening, weight,
                          nslot, f, nf, file, variable, s, line, hdr,
-                         role_weight, shifted) {
+                         role_weight, role_list, shifted) {
   header = ""
   block = ""
   for (i = 1; i <= family_count; i++) {
@@ -85,14 +85,24 @@ function emit_family(    header, block, role, indent, i, j, opening, weight,
   }
 
   if (role == "western") {
-    nf = split(western_list, files, ",")
+    role_list = western_list
     split(western_vars, vars, ",")
     role_weight = western_weight
   } else {
-    nf = split(chinese_list, files, ",")
+    role_list = chinese_list
     split(chinese_vars, vars, ",")
     role_weight = chinese_weight
   }
+
+  # Empty chain for this role: every font was removed, so restore the system
+  # default by emitting the original family verbatim (no FontSetting file is
+  # referenced, nothing is counted as adapted).
+  if (role_list == "") {
+    for (i = 1; i <= family_count; i++) print family_lines[i]
+    return
+  }
+
+  nf = split(role_list, files, ",")
   if (nf > max_fonts) nf = max_fonts
 
   for (f = 1; f <= nf; f++) {

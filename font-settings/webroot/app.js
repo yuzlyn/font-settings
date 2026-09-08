@@ -106,6 +106,7 @@ const TRANSLATIONS = {
     restoredDefaultEmoji: "已恢复系统默认 Emoji",
     emojiStyleSaved: "Emoji 样式已保存",
     fontFileMissing: "字体文件缺失",
+    fontCountEmpty: "使用系统默认字体（重启后生效）",
     variableFont: "可变字体",
     staticFont: "静态字体",
     fontWeight: "字重",
@@ -238,6 +239,7 @@ const TRANSLATIONS = {
     restoredDefaultEmoji: "已恢復系統預設 Emoji",
     emojiStyleSaved: "Emoji 樣式已儲存",
     fontFileMissing: "字型檔案缺失",
+    fontCountEmpty: "使用系統預設字型（重新啟動後生效）",
     variableFont: "可變字型",
     staticFont: "靜態字型",
     fontWeight: "字重",
@@ -370,6 +372,7 @@ const TRANSLATIONS = {
     restoredDefaultEmoji: "System default Emoji restored",
     emojiStyleSaved: "Emoji style saved",
     fontFileMissing: "Font file missing",
+    fontCountEmpty: "Using system default fonts (applies after restart)",
     variableFont: "Variable font",
     staticFont: "Static font",
     fontWeight: "Font weight",
@@ -1307,7 +1310,7 @@ function renderChain(role, values) {
   const current = roles[role];
   const chain = collectChain(role, values);
   latestChains[role] = chain;
-  current.count.textContent = chain.length ? `${chain.length} ${t("fontCountUnit")}` : t("fontFileMissing");
+  current.count.textContent = chain.length ? `${chain.length} ${t("fontCountUnit")}` : t("fontCountEmpty");
   current.chain.textContent = "";
   chain.forEach((font, index) => {
     current.chain.append(renderChainRow(role, font, index, chain.length));

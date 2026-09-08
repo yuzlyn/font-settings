@@ -18,6 +18,10 @@ cp -f "$SOURCE_DIR/font-settings/tools/fontxml.awk" "$MODULE_DIR/tools/fontxml.a
 printf '1\n' > "$MODULE_DIR/data/chinese.variable"
 printf '1\n' > "$MODULE_DIR/data/western.variable"
 printf '80\n' > "$MODULE_DIR/data/western.size"
+# Placeholder slot files: read_role_chain only keeps fonts whose file still
+# exists, mirroring the real module where removing a font deletes the file.
+: > "$MODULE_DIR/system/fonts/FontSettingChinese.ttf"
+: > "$MODULE_DIR/system/fonts/FontSettingWestern.ttf"
 
 FONT_CONFIG_ROOT="$TEST_DIR/fontconfig-fixture" sh "$MODULE_DIR/tools/fontconfig.sh" prepare >/dev/null
 
@@ -69,5 +73,33 @@ FONT_CONFIG_ROOT="$TEST_DIR/fontconfig-fixture" sh "$MODULE_DIR/tools/fontconfig
 grep -q '<axis tag="wght" stylevalue="400"/>' "$SYSTEM_OUTPUT"
 grep -q '<axis tag="wght" stylevalue="700"/>' "$SYSTEM_OUTPUT"
 ! grep -q '<axis tag="wght" stylevalue="900"/>' "$SYSTEM_OUTPUT"
+
+# Removing every font must restore the original system configuration
+# verbatim: once the slot files are gone, the chain is empty and the
+# generator emits the stock families untouched, so no missing font file is
+# ever referenced (the previous behaviour referenced the deleted bundled
+# files and could prevent booting).
+rm -f "$MODULE_DIR/system/fonts/FontSettingChinese.ttf" "$MODULE_DIR/system/fonts/FontSettingWestern.ttf"
+printf '400\n' > "$MODULE_DIR/data/western.weight"
+printf '400\n' > "$MODULE_DIR/data/chinese.weight"
+FONT_CONFIG_ROOT="$TEST_DIR/fontconfig-fixture" sh "$MODULE_DIR/tools/fontconfig.sh" apply >/dev/null
+! grep -q 'FontSetting' "$SYSTEM_OUTPUT"
+! grep -q 'FontSetting' "$EXT_OUTPUT"
+! grep -q 'FontSetting' "$PRODUCT_OUTPUT"
+grep -q '<family name="sans-serif">' "$SYSTEM_OUTPUT"
+grep -q 'postScriptName="Roboto-Regular" supportedAxes="wght,ital"' "$SYSTEM_OUTPUT"
+cmp -s "$SYSTEM_OUTPUT" "$TEST_DIR/fontconfig-fixture/system/etc/fonts.xml"
+cmp -s "$EXT_OUTPUT" "$TEST_DIR/fontconfig-fixture/system_ext/etc/fonts_base.xml"
+cmp -s "$PRODUCT_OUTPUT" "$TEST_DIR/fontconfig-fixture/product/etc/fonts_customization.xml"
+
+# One role emptied while the other still carries fonts: the emptied role goes
+# back to system defaults, the other role is still adapted.
+: > "$MODULE_DIR/system/fonts/FontSettingWestern.ttf"
+printf 'FontSettingWestern.ttf 1 Q2Flc2l1bVZGLVVwcmlnaHQudHRm\n' > "$MODULE_DIR/data/western.list"
+FONT_CONFIG_ROOT="$TEST_DIR/fontconfig-fixture" sh "$MODULE_DIR/tools/fontconfig.sh" apply >/dev/null
+! grep -q 'FontSettingChinese' "$SYSTEM_OUTPUT"
+! grep -q 'FontSettingChinese' "$PRODUCT_OUTPUT"
+grep -q 'FontSettingWestern.ttf' "$SYSTEM_OUTPUT"
+grep -q 'NotoSansCJK-Regular.ttc' "$SYSTEM_OUTPUT"
 
 echo "fontconfig fixtures: passed"

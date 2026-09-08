@@ -1,15 +1,17 @@
 # Font Settings
 
 - 作者：**yuzlyn**
-- 版本：**v2.3.5**
+- 版本：**v2.3.6**
 - 模块 ID：`font-settings`
 
 这是一个适用于 Android 8.0+ 的通用 KernelSU 字体模块，不限定手机品牌或 ROM。模块提供离线 WebUI，中文与西文各自可上传多个 `.ttf` 字体并按顺序组成 font-family 回退链（缺字自动回退，支持拖拽排序），上传可变字体后可调节 `100`–`900` 字重，并可选择内置 iOS、Google、Blobmoji、Facebook Emoji 或上传自定义 `.ttf/.otf`。所有替换均通过 KernelSU systemless mount 生效，不直接修改系统分区。
 
 ## 下载
 
-- 完整包：[font-settings_v2.3.5_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.3.5/font-settings_v2.3.5_KSU.zip)，`178,714,865` 字节，SHA-256：`19AD5E2D4F50BCEC93AA5DB76B6947E9CBB0EC61870CCF853D446CE470508309`。
-- 精简包：[font-settings_v2.3.5_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.3.5/font-settings_v2.3.5_lite_KSU.zip)，`32,994,138` 字节，SHA-256：`95438CC790BD5BD76578957E91471473B662B5F32B1208A03597249BF3CD7000`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+- 完整包：[font-settings_v2.3.6_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.3.6/font-settings_v2.3.6_KSU.zip)，`178,715,488` 字节，SHA-256：`AD3BFF05DD239BC3F1800A4885A9EADB726B9A7F348DA18EA16DA81C8923F0C9`。
+- 精简包：[font-settings_v2.3.6_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.3.6/font-settings_v2.3.6_lite_KSU.zip)，`32,994,761` 字节，SHA-256：`B3228CDA86A4D6DC22B48A1FA1D9B833232498D8003997557793406BC289D93E`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+
+v2.3.6 修复删除全部字体后无法恢复系统默认、个别用户重启不开机的问题。此前把所有中英文字体删除后，链为空时生成器仍会回退引用模块自带的默认字体文件（这些文件已随删除一并移除），生成的字型 XML 会指向不存在的文件，部分设备重启时因此卡在开机界面；同时删光字体也并不能真正回到系统默认（配置仍注入内置字体）。现在链为空时生成器原样输出设备原始字族——不引用任何缺失文件，重启后即为系统默认字体，WebUI 的计数处会提示“使用系统默认字体（重启后生效）”。另外修复了模块升级偶发丢失全部上传字体的问题：`customize.sh` 之前只在内置默认字体仍存在时才保留字体链，删除过默认字体的用户（链中只剩 `-N` 槽位文件）升级后上传字体被静默清空，现在只要模块目录里有任何已上传字体都会完整保留。
 
 v2.3.5 修复个别设备安装后 WebUI 显示“KernelSU 连接失败”的问题。根因是安装时 `customize.sh` 未执行（模块文件保持打包时的默认权限），`tools/fontctl.sh` 与 `webroot/cgi-bin/exec` 没有可执行位，WebUI 每次调用都以“Permission denied”失败，同时字体配置备份与 Emoji/字号等设置也没有保留。现在 `service.sh` 开机后自愈：自动恢复关键脚本的可执行位，并在字体配置备份缺失时重新生成，即使安装过程异常也能保证 WebUI 正常连接。如果你的手机出现该症状，安装 v2.3.5 并重启一次即可恢复；已丢失的上传字体和 Emoji 设置需要重新上传。
 
@@ -139,7 +141,7 @@ WebUI 通过 root bridge 读取 `theme_customization_overlay_packages` 中的 Mo
 - 西文字体映射到系统默认 `sans-serif`、常见 OEM `sys-sans-en` / `op-sans-en`，以及旧 Android 的首个未命名字族。
 - 中文字体只映射 `zh` / `yue` 语言 family，包括 `zh-Hans`、`zh-Hant`、`zh-Bopo` 等，不改写日文、韩文、Emoji、数学符号或 serif family。
 - 生成器会移除原字体专属的 TTC `index`、PostScript 名称和轴声明；可变字体按原 XML 权重写入 `wght` 轴，静态字体交给 Android 合成权重。
-- 回退链的每个字体生成一个独立的 `<family>`（首个保留原 `name`/`lang`，后续级别去掉 `name` 避免命名冲突），按列表顺序排列；开启“缺字回退”时在链末追加原始系统字族。Android 按 `<family>` 顺序做字形回退，因此缺字会依次落到后续字体。
+- 回退链的每个字体生成一个独立的 `<family>`（首个保留原 `name`/`lang`，后续级别去掉 `name` 避免命名冲突），按列表顺序排列；开启“缺字回退”时在链末追加原始系统字族。Android 按 `<family>` 顺序做字形回退，因此缺字会依次落到后续字体。链只保留文件实际存在的字体；某个角色的字体全部删除后，生成器原样输出设备原始字族并停止注入该角色的字体（等于恢复系统默认，且不会引用已删除的文件）。
 - 西文字号以 `data/western.size` 保存，范围限制为 `20` 到 `100`。WebUI 会通过调整西文字体 `head.unitsPerEm` 生成缩放后的字体文件，生成器也会为小于 `100` 的西文字体节点写入 Android 字体 XML 的 `size` 属性作为兼容补充。
 - 可变字体字重以 `data/<role>.weight` 保存，范围 `100` 到 `900`，默认 `400`。生成器为可变字体的每个槽位把 `wght` 轴值改写为“原槽位字重 + 设定字重 − 400”并钳制到 `100`–`900`，静态字体节点不受影响。
 - 浏览器以 80 KiB 分块通过 KernelSU root bridge 写入临时文件；两端都支持时使用 gzip 压缩传输（`base64 -d | gzip -dc` 解压追加），否则回退原始 base64 分块。分块大小保证编码后的指令长度低于 `execve` 的 128 KiB 参数上限。
@@ -238,7 +240,7 @@ sh tests/fontconfig-test.sh
 .\package-font-settings.ps1 -Edition lite
 ```
 
-本版本已在 OPPO PHY110（Android 16 / API 36 / KernelSU 3.2.4）实机验证：动态生成的字体配置可解析且 magic mount 生效、无 minikin/font 报错；中英文字体链的添加、删除、排序与缺字回退后端命令均通过；字重偏移、钳制与非法值回退通过 fontconfig 夹具测试，`weight-set` 写入、状态回读与字体配置重生成在设备上验证；内置 WebUI 服务（busybox httpd 静态页面与 `POST /cgi-bin/exec` 执行、`fontctl status` 回读）在设备上实测通过，v2.3.5 的自愈流程（修复可执行位、重生成字体配置备份）在真实“安装异常”现场验证；Playwright 冒烟覆盖了浏览器模式 HTTP 桥、宿主无文件选择器时的回退对话框、路径导入与选择器正常打开时的抑制逻辑；所有 shell 脚本通过 `sh -n` 语法检查。
+本版本已在 OPPO PHY110（Android 16 / API 36 / KernelSU 3.2.4）实机验证：动态生成的字体配置可解析且 magic mount 生效、无 minikin/font 报错；中英文字体链的添加、删除、排序与缺字回退后端命令均通过；字重偏移、钳制与非法值回退通过 fontconfig 夹具测试，`weight-set` 写入、状态回读与字体配置重生成在设备上验证；v2.3.6 的“删除全部字体恢复系统默认”用例通过夹具验证（生成结果与原设备配置逐字节一致、零 `FontSetting` 引用），单角色清空另一角色保留的混合场景同样通过，模块升级保留仅含 `-N` 槽位的字体链在设备上实测（3+2 字体、链清单与 Emoji 设置均保留）；内置 WebUI 服务与 v2.3.5 的自愈流程在真实“安装异常”现场验证；Playwright 冒烟覆盖了浏览器模式 HTTP 桥、宿主无文件选择器时的回退对话框、路径导入与选择器正常打开时的抑制逻辑；所有 shell 脚本通过 `sh -n` 语法检查。
 
 ## 许可与来源
 

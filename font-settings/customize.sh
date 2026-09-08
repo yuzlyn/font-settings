@@ -14,22 +14,23 @@ LEGACY_MODID=font_setting_coloros16
 OLDMOD="/data/adb/modules/$MODID"
 [ -d "$OLDMOD" ] || OLDMOD="/data/adb/modules/$LEGACY_MODID"
 
-# 更新模块时保留用户已经上传的字体和元数据。
-if [ -f "$OLDMOD/system/fonts/FontSettingChinese.ttf" ] && [ -f "$OLDMOD/system/fonts/FontSettingWestern.ttf" ]; then
-  ui_print "- 保留已上传的字体"
-  cp -af "$OLDMOD/system/fonts/FontSettingChinese.ttf" "$MODPATH/system/fonts/FontSettingChinese.ttf"
-  cp -af "$OLDMOD/system/fonts/FontSettingWestern.ttf" "$MODPATH/system/fonts/FontSettingWestern.ttf"
-  for file in chinese.name.b64 chinese.variable western.name.b64 western.variable; do
-    [ -f "$OLDMOD/data/$file" ] && cp -af "$OLDMOD/data/$file" "$MODPATH/data/$file"
+# 更新模块时保留用户已经上传的字体和元数据。不要求内置默认字体仍在链
+# 中：用户删除默认字体后可能只保留 -N 槽位文件，同样需要完整保留，否则
+# 升级会静默丢失全部上传字体。
+if [ -d "$OLDMOD/system/fonts" ]; then
+  mkdir -p "$MODPATH/system/fonts" "$MODPATH/data"
+  preserved=0
+  for font in "$OLDMOD"/system/fonts/FontSettingChinese*.ttf "$OLDMOD"/system/fonts/FontSettingWestern*.ttf; do
+    [ -f "$font" ] || continue
+    cp -af "$font" "$MODPATH/system/fonts/"
+    preserved=1
   done
-
-  # 保留多字体链：slot 字体文件与顺序清单。
-  for slot in "$OLDMOD"/system/fonts/FontSettingChinese-*.ttf "$OLDMOD"/system/fonts/FontSettingWestern-*.ttf; do
-    [ -f "$slot" ] && cp -af "$slot" "$MODPATH/system/fonts/"
-  done
-  for file in chinese.list western.list; do
-    [ -f "$OLDMOD/data/$file" ] && cp -af "$OLDMOD/data/$file" "$MODPATH/data/$file"
-  done
+  if [ "$preserved" = 1 ]; then
+    ui_print "- 保留已上传的字体"
+    for file in chinese.list western.list chinese.name.b64 chinese.variable western.name.b64 western.variable; do
+      [ -f "$OLDMOD/data/$file" ] && cp -af "$OLDMOD/data/$file" "$MODPATH/data/$file"
+    done
+  fi
 fi
 
 # 通用版保留首次安装时捕获的 ROM 原始配置，避免模块更新时备份到自己的 overlay。

@@ -6,6 +6,7 @@ DATA_DIR="$MODDIR/data"
 ORIGINAL_DIR="$MODDIR/config/original"
 MANIFEST="$DATA_DIR/font-configs.list"
 AWK_SCRIPT="$SCRIPT_DIR/fontxml.awk"
+SYSTEM_FONT_DIR="$MODDIR/system/fonts"
 SYSTEM_ROOT=${FONT_CONFIG_ROOT:-}
 
 fail() {
@@ -46,13 +47,18 @@ read_weight() {
 }
 
 # Fills CHAIN_FILES / CHAIN_VARS with comma-joined ordered font names and
-# variable flags for a role. Falls back to the legacy single-font slot when the
-# chain list has not been created yet.
+# variable flags for a role. Only fonts whose file actually exists are kept,
+# so removing every font (which also deletes the bundled slot files) yields an
+# empty chain instead of referencing a missing file. When the chain list has
+# not been created yet it falls back to the legacy single-font slot, but only
+# while that bundled font file still exists.
 read_role_chain() {
   role="$1"
   list_file="$DATA_DIR/$role.list"
   CHAIN_FILES=""
   CHAIN_VARS=""
+  legacy_file="FontSettingChinese.ttf"
+  [ "$role" = "chinese" ] || legacy_file="FontSettingWestern.ttf"
 
   if [ -s "$list_file" ]; then
     while IFS= read -r entry; do
@@ -63,6 +69,7 @@ read_role_chain() {
         FontSettingChinese.ttf|FontSettingChinese-[0-9]*.ttf|FontSettingWestern.ttf|FontSettingWestern-[0-9]*.ttf) ;;
         *) continue ;;
       esac
+      [ -f "$SYSTEM_FONT_DIR/$name" ] || continue
       case "$var" in 0|1) ;; *) var=0 ;; esac
       if [ -n "$CHAIN_FILES" ]; then
         CHAIN_FILES="$CHAIN_FILES,$name"
@@ -74,14 +81,9 @@ read_role_chain() {
     done < "$list_file"
   fi
 
-  if [ -z "$CHAIN_FILES" ]; then
-    if [ "$role" = "chinese" ]; then
-      CHAIN_FILES="FontSettingChinese.ttf"
-      CHAIN_VARS="$(read_flag "$DATA_DIR/chinese.variable")"
-    else
-      CHAIN_FILES="FontSettingWestern.ttf"
-      CHAIN_VARS="$(read_flag "$DATA_DIR/western.variable")"
-    fi
+  if [ -z "$CHAIN_FILES" ] && [ -f "$SYSTEM_FONT_DIR/$legacy_file" ]; then
+    CHAIN_FILES="$legacy_file"
+    CHAIN_VARS="$(read_flag "$DATA_DIR/$role.variable")"
   fi
 }
 
@@ -188,8 +190,16 @@ apply_configs() {
   done < "$MANIFEST"
 
   rm -f "$DATA_DIR/.fontxml.stats"
-  [ "$total_western" -gt 0 ] || fail "western_family_not_found"
-  [ "$total_chinese" -gt 0 ] || fail "chinese_family_not_found"
+  # A role whose chain still has fonts must have been adapted on this device;
+  # an empty chain is the deliberate "restore system default" state and is not
+  # an error. (Install-time runs always carry the bundled fonts, so this still
+  # rejects devices whose config exposes no adapt-able default family.)
+  if [ -n "$chinese_files" ] && [ "$total_chinese" -eq 0 ]; then
+    fail "chinese_family_not_found"
+  fi
+  if [ -n "$western_files" ] && [ "$total_western" -eq 0 ]; then
+    fail "western_family_not_found"
+  fi
   printf '%s\n' "$total_western" > "$DATA_DIR/western.targets"
   printf '%s\n' "$total_chinese" > "$DATA_DIR/chinese.targets"
   chmod 0644 "$DATA_DIR/western.targets" "$DATA_DIR/chinese.targets"
