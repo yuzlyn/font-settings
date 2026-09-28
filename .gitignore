@@ -23,3 +23,6 @@ font-settings_v*_KSU.zip
 .idea/
 .DS_Store
 Thumbs.db
+
+# Generated frontend screenshots
+webui/.screenshots/
