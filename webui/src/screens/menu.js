@@ -1,42 +1,50 @@
-/** Root screen (字型設定): sectioned navigation list with the reboot FAB. */
+/**
+ * Root screen (主頁 / 字型設定): the five-row editing list plus a font preview
+ * card, under a top app bar whose trailing power_settings_new button reboots the
+ * device and whose leading arrow_back exits the WebUI.
+ *
+ * The menu has no floating action button: everything it needs is a row in the
+ * list. The bottom navigation bar (字型 / 介紹 / 關於) is provided by the shell.
+ */
 
 import { t } from "../i18n.js";
-import { el, escapeHtml, icon, listGroup, openDialog } from "../ui.js";
+import { el, escapeHtml, icon, listGroup, wireAppBarScroll } from "../ui.js";
 
 const AUTHOR_URL = "https://github.com/yuzlyn";
-const TELEGRAM_URL = "https://t.me/fontsettings";
-const QQ_URL = "mqqapi://card/show_pslcard?src_type=internal&version=1&uin=1082347624&card_type=group&source=qrcode";
-const REPO_URL = "https://github.com/yuzlyn/font-settings";
 
-function statusSupporting(state) {
-  if (state.error) return t("connectionFailed");
-  if (!state.status) return t("statusLoading");
-  const { targets, pendingReboot } = state.status;
-  const adapted = t("statusAdapted", { western: targets.western, chinese: targets.chinese });
-  return pendingReboot ? `${adapted} · ${t("statusPending")}` : adapted;
+/** The active Chinese font name shown in the preview card. */
+function previewFontName(state) {
+  const chain = state?.status?.chains?.chinese ?? [];
+  const first = chain[0]?.displayName || chain[0]?.name;
+  return first || "NotoSans TC";
 }
 
 export function buildMenuScreen(ctx) {
   const state = ctx.state;
   const screen = el(`<section class="screen" data-screen="menu">
     <header class="screen-header">
-      <div class="screen-header-row">
-        <md-icon-button variant="tonal" data-back aria-label="${escapeHtml(t("close"))}">
-          ${icon("arrow_back")}
-        </md-icon-button>
-        <span class="spacer"></span>
-        <md-icon-button variant="tonal" data-refresh aria-label="${escapeHtml(t("refresh"))}">
-          ${icon("refresh")}
-        </md-icon-button>
-      </div>
-      <h1 class="screen-title typescale-headline-medium-emphasized">${escapeHtml(t("appTitle"))}</h1>
-      <div class="status-chip-row" data-chips></div>
+      <md-icon-button variant="tonal" data-back aria-label="${escapeHtml(t("exitWebui"))}">
+        ${icon("arrow_back")}
+      </md-icon-button>
+      <h1 class="screen-title typescale-title-large">${escapeHtml(t("appTitle"))}</h1>
+      <span class="spacer"></span>
+      <md-icon-button variant="tonal" data-reboot aria-label="${escapeHtml(t("rebootFab"))}">
+        ${icon("power_settings_new")}
+      </md-icon-button>
     </header>
     <div class="screen-content">
       <h2 class="section-label typescale-title-medium-emphasized">${escapeHtml(t("sectionEdit"))}</h2>
       <div data-edit></div>
-      <h2 class="section-label typescale-title-medium-emphasized">${escapeHtml(t("sectionAbout"))}</h2>
-      <div class="about-group" data-about></div>
+      <div class="elevated-card preview-card">
+        <div class="preview-media" role="img" aria-label="${escapeHtml(t("fontPreview"))}">
+          ${icon("text_fields")}
+          <span class="preview-sample" aria-hidden="true">字 Aa 永</span>
+        </div>
+        <div class="preview-copy">
+          <div class="typescale-title-medium-emphasized">${escapeHtml(t("fontPreview"))}</div>
+          <div class="typescale-body-medium" data-preview-name></div>
+        </div>
+      </div>
     </div>
   </section>`);
 
@@ -44,43 +52,7 @@ export function buildMenuScreen(ctx) {
     if (history.length > 1) history.back();
     else window.close();
   });
-  screen.querySelector("[data-refresh]").addEventListener("click", () => ctx.actions.refresh());
-
-  /* ------------------------------------------------------- connection chips */
-  const chips = screen.querySelector("[data-chips]");
-  let chipSignature = null;
-
-  function renderChips(next) {
-    const signature = `${Boolean(next.error)}|${next.status?.pendingReboot}|${next.busy}`;
-    if (signature === chipSignature) return;
-    chipSignature = signature;
-    chips.textContent = "";
-    const connected = !next.error && next.status;
-    chips.append(
-      el(`<span class="status-chip" data-state="${connected ? "ok" : "error"}">
-        ${icon(connected ? "check_circle" : "error", { filled: true })}
-        <span class="typescale-label-large">${escapeHtml(
-          connected ? t(ctx.actions.bridgeLabelKey()) : t("connectionFailed"),
-        )}</span>
-      </span>`),
-    );
-    if (next.status?.pendingReboot) {
-      chips.append(
-        el(`<span class="status-chip" data-state="pending">
-          ${icon("autorenew")}
-          <span class="typescale-label-large">${escapeHtml(t("statusPending"))}</span>
-        </span>`),
-      );
-    }
-    if (next.busy) {
-      chips.append(
-        el(`<span class="status-chip" data-state="busy">
-          ${icon("sync")}
-          <span class="typescale-label-large">${escapeHtml(t("working"))}</span>
-        </span>`),
-      );
-    }
-  }
+  screen.querySelector("[data-reboot]").addEventListener("click", () => ctx.actions.reboot());
 
   /* ------------------------------------------------------------ edit group */
   const fallbackSwitch = el(`<md-switch ${state.status?.fallback ? "selected" : ""} aria-label="${escapeHtml(
@@ -95,7 +67,6 @@ export function buildMenuScreen(ctx) {
       supporting: t("authorSupport"),
       leading: "account_circle",
       leadingFilled: true,
-      tone: "primary-container",
       type: "link",
       onClick: () => window.open(AUTHOR_URL, "_blank", "noopener"),
     },
@@ -109,7 +80,7 @@ export function buildMenuScreen(ctx) {
       headline: t("latinFont"),
       supporting: t("latinSupport"),
       leading: "language",
-      onClick: () => ctx.actions.navigate("latin", { direction: "left" }),
+      onClick: () => ctx.actions.navigate("latin", { direction: "right" }),
     },
     {
       headline: t("emojiSettings"),
@@ -119,7 +90,7 @@ export function buildMenuScreen(ctx) {
     },
     {
       headline: t("fallbackLabel"),
-      supporting: state.status?.fallback ? t("fallbackOnDetail") : t("fallbackOffDetail"),
+      supporting: t("fallbackSupport"),
       leading: "sort",
       trailing: fallbackSwitch,
       onClick: () => fallbackSwitch.click(),
@@ -127,129 +98,16 @@ export function buildMenuScreen(ctx) {
   ]);
   screen.querySelector("[data-edit]").append(editGroup);
 
-  /* ----------------------------------------------------------- about group */
-  const aboutGroup = el('<div class="list-group"></div>');
-  const about = listGroup([
-    {
-      headline: t("systemStatus"),
-      supporting: statusSupporting(state),
-      leading: "settings",
-      onClick: () => ctx.actions.openStatusDialog(),
-    },
-    {
-      headline: t("tgGroup"),
-      supporting: "t.me/fontsettings",
-      leading: "person_add",
-      onClick: () => window.open(TELEGRAM_URL, "_blank", "noopener"),
-    },
-    {
-      headline: t("qqGroup"),
-      supporting: t("qqNumber"),
-      leading: "supervisor_account",
-      onClick: () => window.open(QQ_URL, "_blank", "noopener"),
-    },
-    {
-      headline: t("sourceRepository"),
-      supporting: t("repoAddress"),
-      leading: "info",
-      onClick: () => window.open(REPO_URL, "_blank", "noopener"),
-    },
-    {
-      headline: t("donateAuthor"),
-      supporting: t("donateSupport"),
-      leading: "favorite",
-      onClick: () => window.open("donate.html", "_blank", "noopener"),
-    },
-  ]);
-  aboutGroup.append(about);
-
-  /* The spec places the reboot FAB inside the About group, middle right, drawn
-     in front of the list. */
-  const fab = el(`<md-fab size="medium" class="fab-in-group" aria-label="${escapeHtml(t("rebootFab"))}">
-    ${icon("power_settings_new")}
-  </md-fab>`);
-  fab.addEventListener("click", () => ctx.actions.reboot());
-  aboutGroup.append(fab);
-  screen.querySelector("[data-about]").append(aboutGroup);
+  const previewName = screen.querySelector("[data-preview-name]");
 
   function update(next) {
-    renderChips(next);
     const value = next.status?.fallback ?? true;
     fallbackSwitch.selected = value;
-    const rows = about.querySelectorAll("md-list-item");
-    const supporting = rows[0]?.querySelector('[slot="supporting-text"]');
-    if (supporting) supporting.textContent = statusSupporting(next);
-    const fallbackRow = editGroup.querySelectorAll("md-list-item")[4];
-    const fallbackSupport = fallbackRow?.querySelector('[slot="supporting-text"]');
-    if (fallbackSupport) {
-      fallbackSupport.textContent = value ? t("fallbackOnDetail") : t("fallbackOffDetail");
-    }
+    previewName.textContent = t("fontPreviewFont", { name: previewFontName(next) });
   }
 
   update(state);
   screen.update = update;
+  wireAppBarScroll(screen);
   return screen;
-}
-
-/** Status dialog with live module counters and quick actions. */
-export async function openStatusDialog(ctx) {
-  const state = ctx.state;
-  const status = state.status;
-  const conflicts = status?.conflicts?.length
-    ? t("statusConflicts", { modules: status.conflicts.join("、") })
-    : t("statusNoConflicts");
-  const dialog = el(`<md-dialog>
-    <div slot="headline" class="typescale-title-large">${escapeHtml(t("statusTitle"))}</div>
-    <div slot="content" class="dialog-body">
-      <div class="status-line">
-        ${icon("settings")}
-        <span class="typescale-body-medium">${escapeHtml(t("statusModule"))}</span>
-        <span class="spacer"></span>
-        <span class="typescale-body-large">${escapeHtml(state.moduleVersion || "—")}</span>
-      </div>
-      <div class="status-line">
-        ${icon("text_fields")}
-        <span class="typescale-body-medium">${escapeHtml(t("fontDetailKind"))}</span>
-        <span class="spacer"></span>
-        <span class="typescale-body-large">${escapeHtml(
-          status
-            ? t("statusPreviewFonts", {
-                chinese: status.chains.chinese.length,
-                western: status.chains.western.length,
-              })
-            : t("statusLoading"),
-        )}</span>
-      </div>
-      <div class="status-line">
-        ${icon("autorenew")}
-        <span class="typescale-body-medium">${escapeHtml(t("statusPending"))}</span>
-        <span class="spacer"></span>
-        <span class="typescale-body-large">${escapeHtml(
-          status ? (status.pendingReboot ? t("enabled") : t("statusSynced")) : "—",
-        )}</span>
-      </div>
-      <div class="status-line">
-        ${icon("warning")}
-        <span class="typescale-body-medium">${escapeHtml(conflicts)}</span>
-      </div>
-      <div class="status-line">
-        ${icon("palette")}
-        <span class="typescale-body-medium">${escapeHtml(t("accentLabel"))}</span>
-        <span class="spacer"></span>
-        <span class="typescale-body-large">${escapeHtml(
-          state.theme?.dynamic ? t("accentDynamic") : t("accentFallback"),
-        )}</span>
-      </div>
-    </div>
-    <div slot="actions" class="dialog-actions">
-      <md-text-button value="refresh">${escapeHtml(t("refresh"))}</md-text-button>
-      <md-filled-tonal-button value="reboot">${escapeHtml(t("rebootFab"))}</md-filled-tonal-button>
-      <md-filled-button value="close">${escapeHtml(t("close"))}</md-filled-button>
-    </div>
-  </md-dialog>`);
-  document.body.append(dialog);
-  const result = await openDialog(dialog);
-  dialog.remove();
-  if (result === "refresh") await ctx.actions.refresh();
-  else if (result === "reboot") await ctx.actions.reboot();
 }

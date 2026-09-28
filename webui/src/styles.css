@@ -284,8 +284,8 @@ md-icon {
 .screen-content {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: var(--app-gutter) var(--app-gutter) 96px;
+  gap: 12px;
+  padding: 8px var(--app-gutter) calc(96px + env(safe-area-inset-bottom, 0px));
 }
 
 /* Screen transitions: standard motion, no bounce. Later screens slide in. */
@@ -337,27 +337,51 @@ md-icon {
   }
 }
 
-/* ----------------------------------------------------------------- header */
+/* ----------------------------------------------------------------- header
+   M3 top app bar: 64dp tall, surface background, a titleLarge title and 48dp
+   icon buttons. It is pinned while the screen scrolls and switches to the
+   surfaceContainer colour once content moves under it. */
 .screen-header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: var(--app-gutter) var(--app-gutter) 4px;
-}
-
-.screen-header-row {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 56px;
+  gap: 4px;
+  min-height: 64px;
+  padding: 0 8px 0 4px;
+  background-color: var(--md-sys-color-surface);
+  transition: background-color var(--md-sys-motion-duration-short4)
+    var(--md-sys-motion-easing-standard);
+}
+
+.screen-header.scrolled {
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.screen-header md-icon-button {
+  width: 48px;
+  height: 48px;
+  --md-icon-button-icon-size: 24px;
 }
 
 .screen-title {
   margin: 0;
+  padding-inline: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A top app bar without a leading icon (README / About) keeps the title on the
+   16dp edge inset instead of hugging the screen edge. */
+.screen-header--title-only {
+  padding-inline-start: 12px;
 }
 
 .section-label {
-  padding: 16px var(--app-gutter) 8px;
+  /* Aligned with the cards below it: the 16dp gutter comes from .screen-content. */
+  padding: 8px 0 0;
   margin: 0;
 }
 
@@ -501,34 +525,219 @@ md-list-item[data-tone="primary-container"] .list-leading {
 }
 
 .empty-state md-icon {
-  font-size: 40px;
+  --md-icon-size: 40px;
   color: var(--md-sys-color-on-surface-variant);
 }
 
-.role-card {
+/* ------------------------------------------------- secondary screen cards */
+/* Control containers on the role screens: 380x160dp surfaceContainer boxes with
+   28dp corners, 16dp apart. The label row (28sp headline + a stretched selected
+   value chip) sits on top and the thick slider below it. */
+.card-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.control-card {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px;
-  border-radius: var(--md-sys-shape-corner-large-increased);
-  background-color: var(--md-sys-color-surface-container-low);
+  padding: 20px;
+  min-height: 160px;
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background-color: var(--md-sys-color-surface-container);
 }
 
-.role-card-head {
+.control-card-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
+  min-height: 40px;
+}
+
+.control-card-title {
+  /* headlineMediumEmphasized at 28sp; line height stays inside the 1.3-1.5x
+     range required for this screen. */
+  margin: 0;
+  line-height: 38px;
+  white-space: nowrap;
+}
+
+/* The value readout chip: M3 size S (40dp) so it matches the 28sp headline it
+   shares the row with, stretched across the remaining width. It is a selected
+   filter chip: secondaryContainer fill with a leading checkmark. */
+.value-chip {
+  flex: 1 1 auto;
+  min-width: 0;
+  --md-filter-chip-container-height: 40px;
+  --md-filter-chip-container-shape: var(--md-sys-shape-corner-small);
+  --md-filter-chip-selected-container-color: var(--md-sys-color-secondary-container);
+  --md-filter-chip-selected-label-text-color: var(--md-sys-color-on-secondary-container);
+  --md-filter-chip-selected-leading-icon-color: var(--md-sys-color-on-secondary-container);
+  --md-filter-chip-label-text-font: var(--app-font-family);
+  --md-filter-chip-label-text-size: 16px;
+  --md-filter-chip-label-text-weight: 600;
+  --md-filter-chip-label-text-line-height: 24px;
+  transition: transform var(--md-sys-motion-duration-short2)
+    var(--md-sys-motion-easing-standard);
+}
+
+.value-chip:active {
+  transform: scale(0.98);
+}
+
+/* Thick M3 Expressive slider: 16dp track, 4x44dp handle. The track left of the
+   handle is primary, everything right of it is secondaryContainer. */
+.expressive-slider {
+  width: 100%;
+  --md-slider-active-track-height: 16px;
+  --md-slider-inactive-track-height: 16px;
+  --md-slider-active-track-color: var(--md-sys-color-primary);
+  --md-slider-inactive-track-color: var(--md-sys-color-secondary-container);
+  --md-slider-active-track-shape: var(--md-sys-shape-corner-full);
+  --md-slider-inactive-track-shape: var(--md-sys-shape-corner-full);
+  --md-slider-handle-width: 4px;
+  --md-slider-handle-height: 44px;
+  --md-slider-handle-shape: var(--md-sys-shape-corner-full);
+  --md-slider-handle-color: var(--md-sys-color-primary);
+  --md-slider-hover-handle-color: var(--md-sys-color-primary);
+  --md-slider-focus-handle-color: var(--md-sys-color-primary);
+  --md-slider-pressed-handle-color: var(--md-sys-color-primary);
+  --md-slider-label-text-font: var(--app-font-family);
+}
+
+/* Connected preset chips: 3dp apart, only the touching corners shrink to 4dp,
+   the group scrolls horizontally when it overflows. */
+.preset-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.preset-row::-webkit-scrollbar {
+  display: none;
+}
+
+.preset-row > md-filter-chip {
+  flex: 0 0 auto;
+  --md-filter-chip-container-height: 32px;
+  --md-filter-chip-container-shape: var(--md-sys-shape-corner-small);
+  --md-filter-chip-outline-color: var(--md-sys-color-outline-variant);
+  --md-filter-chip-label-text-font: var(--app-font-family);
+  --md-filter-chip-selected-container-color: var(--md-sys-color-secondary-container);
+  --md-filter-chip-selected-label-text-color: var(--md-sys-color-on-secondary-container);
+  --md-filter-chip-selected-leading-icon-color: var(--md-sys-color-on-secondary-container);
+  --md-filter-chip-selected-outline-width: 0;
+  transition: transform var(--md-sys-motion-duration-short2)
+    var(--md-sys-motion-easing-standard);
+}
+
+.preset-row > md-filter-chip:active {
+  transform: scale(0.97);
+}
+
+.preset-row > md-filter-chip[data-shape="first"] {
+  --md-filter-chip-container-shape-start-end: var(--md-sys-shape-corner-extra-small);
+  --md-filter-chip-container-shape-end-end: var(--md-sys-shape-corner-extra-small);
+}
+
+.preset-row > md-filter-chip[data-shape="middle"] {
+  --md-filter-chip-container-shape: var(--md-sys-shape-corner-extra-small);
+}
+
+.preset-row > md-filter-chip[data-shape="last"] {
+  --md-filter-chip-container-shape-start-start: var(--md-sys-shape-corner-extra-small);
+  --md-filter-chip-container-shape-end-start: var(--md-sys-shape-corner-extra-small);
+}
+
+/* ------------------------------------------------------------ emoji screen */
+/* Elevated cards: surfaceContainerLow + Level 1 shadow (from .elevated-card),
+   20dp corners, 20dp padding. */
+.emoji-settings-card,
+.emoji-preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border-radius: var(--md-sys-shape-corner-large-increased);
+}
+
+/* The "Emoji 設定" card: copy on the left, the enable switch on the right, the
+   outlined dropdown below (it stays on the card's own background). */
+.emoji-settings-head {
+  display: flex;
+  align-items: flex-start;
   gap: 12px;
 }
 
-.slider-row {
+.emoji-settings-copy {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex: 1;
+  min-width: 0;
 }
 
-.slider-row md-slider {
+.emoji-settings-head md-switch {
+  flex-shrink: 0;
+  /* M3 switch: 52x32dp track, primary when on, surfaceContainerHighest with an
+     outline when off. */
+  --md-switch-track-width: 52px;
+  --md-switch-track-height: 32px;
+  --md-switch-selected-track-color: var(--md-sys-color-primary);
+  --md-switch-track-color: var(--md-sys-color-surface-container-highest);
+  --md-switch-track-outline-color: var(--md-sys-color-outline);
+}
+
+/* Outlined dropdown, styled like the text fields: leading face icon, trailing
+   arrow_drop_down. */
+.emoji-select {
   width: 100%;
+  --md-outlined-select-text-field-container-shape: var(--md-sys-shape-corner-small);
+  --md-outlined-select-text-field-leading-icon-color: var(--md-sys-color-on-surface-variant);
+  --md-outlined-select-text-field-leading-icon-size: 24px;
+  --md-outlined-select-text-field-trailing-icon-color: var(--md-sys-color-on-surface-variant);
+  --md-outlined-select-text-field-trailing-icon-size: 24px;
+  --md-outlined-select-text-field-label-text-font: var(--app-font-family);
+  --md-outlined-select-text-field-input-text-font: var(--app-font-family);
+}
+
+/* The 380dp preview card: a 280dp primaryContainer image placeholder on top. */
+.emoji-preview-card {
+  min-height: 380px;
+}
+
+.emoji-preview-media {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 280px;
+  flex-shrink: 0;
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.emoji-preview-media > md-icon {
+  --md-icon-size: 72px;
+}
+
+.emoji-preview-sample {
+  font-size: 40px;
+  line-height: 1.2;
+  letter-spacing: 8px;
+}
+
+.emoji-preview-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .chain-row {
@@ -591,8 +800,20 @@ md-list-item[data-tone="primary-container"] .list-leading {
 }
 
 .chain-handle {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  margin-inline-start: -8px;
   cursor: grab;
   touch-action: none;
+  color: var(--md-sys-color-on-surface-variant);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+.chain-handle md-icon {
+  font-size: 24px;
 }
 
 .chain-handle:active {
@@ -615,26 +836,39 @@ md-fab {
   --md-fab-lower-elevation: 3;
 }
 
-.fab-floating {
+/* The FAB layer is a sibling of the screen stack: it never scrolls and is not
+   inside a transformed element, so a FAB stays pinned to the bottom-right corner
+   of the app column (Google Keep style) while the screen scrolls. */
+.fab-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.screen-fab {
   position: absolute;
   right: var(--app-gutter);
-  bottom: var(--app-gutter);
-  z-index: 3;
+  bottom: calc(var(--app-gutter) + env(safe-area-inset-bottom, 0px));
+  visibility: hidden;
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+  transition:
+    opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    visibility 0s linear var(--md-sys-motion-duration-short4);
 }
 
-.fab-in-group {
-  position: absolute;
-  right: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 3;
-}
-
-@supports (position: fixed) {
-  .fab-floating {
-    position: fixed;
-    right: max(var(--app-gutter), calc(50vw - var(--app-content-width) / 2 + var(--app-gutter)));
-  }
+.screen-fab[data-active="true"] {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  transition:
+    opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    visibility 0s linear 0s;
 }
 
 /* -------------------------------------------------------------- snackbars */
@@ -675,17 +909,21 @@ md-dialog {
   --md-dialog-supporting-text-font: var(--app-font-family);
   max-width: min(360px, calc(100vw - 48px));
   min-width: 280px;
+  overflow: hidden;
 }
 
 .dialog-body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-width: 260px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .dialog-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
   width: 100%;
@@ -701,6 +939,12 @@ md-text-field {
   margin: 0;
 }
 
+.recent-path-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* --------------------------------------------------------------- progress */
 md-linear-progress {
   --md-linear-progress-active-indicator-height: 4px;
@@ -714,7 +958,6 @@ md-linear-progress {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 8px;
 }
 
 .status-chip {
@@ -752,11 +995,18 @@ md-linear-progress {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .status-line md-icon {
   font-size: 20px;
   color: var(--md-sys-color-on-surface-variant);
+  flex-shrink: 0;
+}
+
+.status-line > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .link-row {
@@ -790,4 +1040,193 @@ md-linear-progress {
   white-space: pre-wrap;
   word-break: break-all;
   font-family: ui-monospace, monospace;
+}
+
+/* ---------------------------------------------------------------- elevated
+   Floating cards: surfaceContainerLow with a Level 1 shadow and 20dp corners. */
+.elevated-card {
+  border-radius: var(--md-sys-shape-corner-large-increased);
+  background-color: var(--md-sys-color-surface-container-low);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 1px 3px 1px rgba(0, 0, 0, 0.15);
+}
+
+/* ------------------------------------------------------- preview card (menu)
+   The 123dp primaryContainer image placeholder above the title and font name. */
+.preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+}
+
+.preview-media {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 123px;
+  flex-shrink: 0;
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.preview-media > md-icon {
+  --md-icon-size: 48px;
+}
+
+.preview-sample {
+  font-size: 22px;
+  line-height: 1.2;
+  letter-spacing: 2px;
+}
+
+.preview-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ------------------------------------------------------------ navigation bar
+   M3 navigation bar: 80dp tall surfaceContainer, a 64x32dp secondaryContainer
+   capsule indicator and a filled icon on the selected destination. */
+.nav-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  height: 80px;
+  padding: 0 8px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  background-color: var(--md-sys-color-surface-container);
+  opacity: 0;
+  transform: translateY(100%);
+  pointer-events: none;
+  transition:
+    opacity var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard);
+}
+
+.nav-bar[data-visible="true"] {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.nav-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 64px;
+  min-width: 64px;
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--app-font-family);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--md-sys-motion-duration-short2)
+    var(--md-sys-motion-easing-standard);
+}
+
+.nav-item:active {
+  transform: scale(0.96);
+}
+
+.nav-item md-icon {
+  font-size: 24px;
+  font-variation-settings: "FILL" 0, "wght" 500, "GRAD" 0, "opsz" 24;
+}
+
+.nav-indicator {
+  position: absolute;
+  top: 8px;
+  z-index: 0;
+  width: 64px;
+  height: 32px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: transparent;
+  transition: background-color var(--md-sys-motion-duration-short4)
+    var(--md-sys-motion-easing-standard);
+}
+
+.nav-item md-icon {
+  position: relative;
+  z-index: 1;
+}
+
+.nav-label {
+  position: relative;
+  z-index: 1;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
+.nav-item.selected {
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.nav-item.selected .nav-indicator {
+  background-color: var(--md-sys-color-secondary-container);
+}
+
+.nav-item.selected md-icon {
+  font-variation-settings: "FILL" 1, "wght" 500, "GRAD" 0, "opsz" 24;
+}
+
+/* ------------------------------------------------------------------- readme
+   The 介紹 (README) screen: sections with lists, a code block and links. */
+.readme-content {
+  gap: 8px;
+}
+
+.readme-tagline {
+  margin: 8px 0 0;
+}
+
+.readme-section {
+  padding: 8px 0;
+}
+
+.readme-section h2 {
+  margin: 8px 0;
+}
+
+.readme-list {
+  margin: 0;
+  padding-inline-start: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.readme-list li {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.readme-code {
+  margin: 8px 0 0;
+  padding: 12px 16px;
+  border-radius: var(--md-sys-shape-corner-small);
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  font-family: ui-monospace, "Cascadia Code", "SF Mono", monospace;
+  font-size: 13px;
+  line-height: 20px;
+  white-space: pre-wrap;
+  word-break: break-all;
 }

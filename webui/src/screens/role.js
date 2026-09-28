@@ -1,23 +1,22 @@
-/** The Chinese / Latin role screens: family chain, sliders and the add FAB. */
+/** The 漢字字型 / 拉丁文字型 screens: family chain, control cards and the add FAB. */
 
 import { t } from "../i18n.js";
 import { formatBytes, normalizeWeight, normalizeWesternSize } from "../module-api.js";
 import {
   confirmDialog,
+  controlCard,
   el,
   escapeHtml,
   icon,
-  listGroup,
-  showMessage,
-  sliderRow,
+  wireAppBarScroll,
 } from "../ui.js";
 
 const ROLE_COPY = {
-  chinese: { titleKey: "chineseFont", sample: "chinese" },
-  western: { titleKey: "latinFont", sample: "western" },
+  chinese: { titleKey: "chineseFont", familyKey: "editChineseFamily" },
+  western: { titleKey: "latinFont", familyKey: "editLatinFamily" },
 };
 
-function chainMeta(role, font, index, total) {
+function chainMeta(role, font, index) {
   return t("chainMeta", {
     index: index + 1,
     size: formatBytes(font.size),
@@ -40,55 +39,29 @@ export function buildRoleScreen(ctx, role) {
 
   const screen = el(`<section class="screen" data-screen="${role}">
     <header class="screen-header">
-      <div class="screen-header-row">
-        <md-icon-button variant="tonal" data-back aria-label="${escapeHtml(t("appTitle"))}">
-          ${icon("arrow_back")}
-        </md-icon-button>
-      </div>
-      <h1 class="screen-title typescale-headline-medium-emphasized">${escapeHtml(t(copy.titleKey))}</h1>
+      <md-icon-button variant="tonal" data-back aria-label="${escapeHtml(t("appTitle"))}">
+        ${icon("arrow_back")}
+      </md-icon-button>
+      <h1 class="screen-title typescale-title-large">${escapeHtml(t(copy.titleKey))}</h1>
     </header>
     <div class="screen-content">
-      <h2 class="section-label typescale-title-medium-emphasized">${escapeHtml(t("editFamily"))}</h2>
-      <div data-summary></div>
+      <h2 class="section-label typescale-title-medium-emphasized">${escapeHtml(t(copy.familyKey))}</h2>
       <div data-progress hidden>
         <md-linear-progress indeterminate></md-linear-progress>
       </div>
       <div data-chain></div>
-      <div data-sliders></div>
+      <div class="card-stack" data-controls></div>
     </div>
-    <div data-fab></div>
   </section>`);
 
   screen.querySelector("[data-back]").addEventListener("click", () => ctx.actions.back());
 
-  const summaryHost = screen.querySelector("[data-summary]");
   const chainHost = screen.querySelector("[data-chain]");
-  const sliderHost = screen.querySelector("[data-sliders]");
+  const controlsHost = screen.querySelector("[data-controls]");
   const progressHost = screen.querySelector("[data-progress]");
-  const fabHost = screen.querySelector("[data-fab]");
 
-  let summarySignature = null;
   let chainSignature = null;
-  let sliderSignature = null;
-
-  function renderSummary() {
-    const signature = `${chain.length}|${chain.some((font) => font.variable)}`;
-    if (signature === summarySignature) return;
-    summarySignature = signature;
-    summaryHost.textContent = "";
-    summaryHost.append(
-      el(`<div class="role-card">
-        <div class="role-card-head">
-          <span class="typescale-title-medium-emphasized">${escapeHtml(
-            chain.length ? t("fontCountUnitCount", { count: chain.length }) : t("fontCountEmpty"),
-          )}</span>
-          <span class="typescale-body-medium">${escapeHtml(
-            chain.some((font) => font.variable) ? t("variableFont") : t("staticFont"),
-          )}</span>
-        </div>
-      </div>`),
-    );
-  }
+  let controlsSignature = null;
 
   function renderChain() {
     const signature = chain.map((font) => `${font.name}:${font.size}:${font.variable}`).join(",");
@@ -98,7 +71,7 @@ export function buildRoleScreen(ctx, role) {
     if (!chain.length) {
       chainHost.append(
         el(`<div class="empty-state">
-          ${icon("font_download")}
+          ${icon("upload_file")}
           <div class="typescale-title-medium-emphasized">${escapeHtml(t("emptyTitle"))}</div>
           <p class="typescale-body-medium">${escapeHtml(t("emptyHint"))}</p>
           <md-filled-tonal-button data-empty-add>${escapeHtml(t("addFont"))}</md-filled-tonal-button>
@@ -110,14 +83,13 @@ export function buildRoleScreen(ctx, role) {
     const group = el('<div class="list-group"></div>');
     chain.forEach((font, index) => {
       const row = el(`<div class="chain-row" data-shape="${shapeFor(index, chain.length)}" data-name="${escapeHtml(font.name)}" data-index="${index}">
-        <div class="list-leading" data-tone="plain">${icon(role === "chinese" ? "text_fields" : "language")}</div>
+        <span class="chain-handle press-scale" role="button" tabindex="0" aria-label="${escapeHtml(t("dragToReorder"))}" title="${escapeHtml(t("dragToReorder"))}">
+          ${icon("drag_handle")}
+        </span>
         <div class="chain-copy">
           <span class="chain-name">${escapeHtml(font.displayName)}</span>
-          <span class="chain-meta">${escapeHtml(chainMeta(role, font, index, chain.length))}</span>
+          <span class="chain-meta">${escapeHtml(chainMeta(role, font, index))}</span>
         </div>
-        <md-icon-button size="s" class="chain-handle press-scale" aria-label="${escapeHtml(t("dragToReorder"))}" title="${escapeHtml(t("dragToReorder"))}">
-          ${icon("drag_handle")}
-        </md-icon-button>
         <md-icon-button size="s" data-detail aria-label="${escapeHtml(t("fontDetail"))}">
           ${icon("more_vert")}
         </md-icon-button>
@@ -135,52 +107,58 @@ export function buildRoleScreen(ctx, role) {
     chainHost.append(group);
   }
 
-  function renderSliders() {
+  function renderControls() {
     const signature = `${status ? status.westernSize : 100}|${status ? status.weight[role] : 400}|${hasVariable}`;
-    if (signature === sliderSignature) return;
-    sliderSignature = signature;
-    sliderHost.textContent = "";
+    if (signature === controlsSignature) return;
+    controlsSignature = signature;
+    controlsHost.textContent = "";
     if (role === "western") {
-      const row = sliderRow({
-        label: t("latinSize"),
-        value: status ? status.westernSize : 100,
-        min: 20,
-        max: 100,
-        step: 1,
-        format: (value) => `${value}%`,
-        onChange: (value) => ctx.actions.setSize(normalizeWesternSize(value)),
-      });
-      row.classList.add("role-card");
-      sliderHost.append(row);
+      controlsHost.append(
+        controlCard({
+          label: t("latinSize"),
+          value: status ? status.westernSize : 100,
+          min: 20,
+          max: 100,
+          step: 1,
+          format: (value) => `${value} %`,
+          onChange: (value) => ctx.actions.setSize(normalizeWesternSize(value)),
+        }),
+      );
     }
     if (hasVariable) {
-      const row = sliderRow({
-        label: t("fontWeight"),
-        value: status ? status.weight[role] : 400,
-        min: 100,
-        max: 900,
-        step: 50,
-        format: (value) => String(value),
-        onChange: (value) => ctx.actions.setWeight(role, normalizeWeight(value)),
-      });
-      row.classList.add("role-card");
-      sliderHost.append(row);
+      controlsHost.append(
+        controlCard({
+          label: t("fontWeight"),
+          value: status ? status.weight[role] : 400,
+          min: 100,
+          max: 900,
+          step: 50,
+          format: (value) => String(value),
+          onChange: (value) => ctx.actions.setWeight(role, normalizeWeight(value)),
+        }),
+      );
     }
   }
 
-  const fab = el(`<md-fab size="medium" class="fab-floating" aria-label="${escapeHtml(t("addFont"))}">
-    ${icon("add")}
+  /* The add FAB is anchored to the bottom-right corner of the app column (like
+     Google Keep) instead of scrolling away with the font chain: it lives in the
+     shell's FAB layer, which only shows it while this screen is on top. */
+  const fab = el(`<md-fab size="medium" class="screen-fab" data-fab-owner="${role}" aria-label="${escapeHtml(
+    t("addFont"),
+  )}">
+    ${icon("add", { slot: "icon" })}
   </md-fab>`);
   fab.addEventListener("click", () => ctx.actions.addFont(role));
-  fabHost.append(fab);
+  const fabLayer = document.querySelector("[data-fab-layer]");
+  fabLayer?.querySelector(`[data-fab-owner="${role}"]`)?.remove();
+  fabLayer?.append(fab);
 
   function update(next) {
     status = next.status;
     chain = status ? status.chains[role] : [];
     hasVariable = chain.some((font) => font.variable);
-    renderSummary();
     renderChain();
-    renderSliders();
+    renderControls();
 
     const uploading = next.upload && next.upload.role === role;
     progressHost.hidden = !uploading;
@@ -198,6 +176,7 @@ export function buildRoleScreen(ctx, role) {
 
   update(ctx.state);
   screen.update = update;
+  wireAppBarScroll(screen);
   return screen;
 }
 

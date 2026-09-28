@@ -1,23 +1,18 @@
 # Font Settings
 
 - 作者：**yuzlyn**
-- 版本：**v2.4.5**
+- 版本：**v2.5.0**
 - 模块 ID：`font-settings`
 
 这是一个适用于 Android 8.0+ 的通用 KernelSU 字体模块，不限定手机品牌或 ROM。模块提供离线 WebUI，中文与西文各自可上传多个 `.ttf` 字体并按顺序组成 font-family 回退链（缺字自动回退，支持拖拽排序），上传可变字体后可调节 `100`–`900` 字重，并可选择内置 iOS、Google、Blobmoji、Facebook Emoji 或上传自定义 `.ttf/.otf`。所有替换均通过 KernelSU systemless mount 生效，不直接修改系统分区。
 
 ## 下载
 
-- 完整包：[font-settings_v2.4.5_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.5/font-settings_v2.4.5_KSU.zip)，`179,034,869` 字节，SHA-256：`FE024EAC5D6C0958AB82C7FA3153743382C6DAF896E1DDAD72CC1B5A222AF6FF`。
-- 精简包：[font-settings_v2.4.5_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.5/font-settings_v2.4.5_lite_KSU.zip)，`33,314,142` 字节，SHA-256：`FD3EDC25FC832D3387622515041C9769D6E7EAAA0F8FE0606B41E026F7A9C892`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+- 完整包：[font-settings_v2.5.0_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.5.0/font-settings_v2.5.0_KSU.zip)，`171,004,714` 字节，SHA-256：`11478DC668B404192D046CD98BDF3F7E978A48A2C2C47EA393E45A585AEE08ED`。
+- 精简包：[font-settings_v2.5.0_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.5.0/font-settings_v2.5.0_lite_KSU.zip)，`25,283,987` 字节，SHA-256：`793257B20DF6B28DB5811561ED74B6DC3F58176E4C3D17DFF70B42DECC960313`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
 
-v2.4.5 修复二级页面退不回主页、并精简二级页面。原因是应用会把上次所在的屏幕存下来、下次直接恢复到该屏幕，于是二级页成了导航栈的根：返回键/返回手势只会关闭 WebUI，界面上的返回箭头也没有上一页可退。现在始终从「字型設定」主页面启动，任何二级页面的返回箭头与系统返回手势都固定回到主页面。同时按要求去掉了二级页面上的下拉选单（预览面板与「已有字族」exposed dropdown 整体移除），改为一行「N 個字型 · 可變/靜態」摘要；并为页面容器加上 `overflow-x: hidden`，保证 412dp 宽度下不出现横向溢出。
+v2.5.0 将内置默认字体改为可变字体 `NotoSansTC > NotoSansSC > NotoSansJP`（中文）与 `Google Sans Code`（西文），替换原来的 `PingRoundSCVF` / `CaesiumVF`，完整包体积约 `171 MB`；WebUI 重构为 6 屏结构（`字型設定` / `漢字字型` / `拉丁文字型` / `Emoji 設定` / `介紹` / `關於`）并新增底部导航栏（字型 / 介紹 / 關於），配色、动效与组件保持 Material 3 Expressive。
 
-v2.4.4 修复 KernelSU 管理器里打开 WebUI 白屏。根因是界面脚本以 ES module（`<script type="module">`）加载：KernelSU 的静态资源处理器用**带查询串的文件名**猜 MIME（`app.js?v=243` 匹配不到已知扩展名），回退成 `text/plain`，而 ES module 在 MIME 不符时会被浏览器直接拒绝 → 白屏；同一份文件作为经典脚本则照常执行（旧版 MDUI 界面正是经典脚本，所以此前没暴露）。现在打包改为 IIFE 经典脚本（`--format=iife` + `<script defer>`），不再依赖宿主的 MIME 判定。同时新增 WebUI 自检：页面启动、bundle 执行、资源加载失败与未捕获异常都会写入 `/data/adb/font-settings/webui-error.log` 并在页面上显示可读错误；`service.sh` 开机还会清掉残留的 `update` 标记（它会让管理器一直显示"待更新"）并重置自检日志。
-
-v2.4.3 修复 KernelSU 管理器闪退与升级丢失用户字体的共同根因。构建脚本在改写 `module.prop` 时写入了 UTF-8 BOM，安装器于是把模块 ID 读成 `<BOM>font-settings`：KernelSU 会看到两个模块目录、模块列表的 key 冲突导致管理器闪退（`IllegalArgumentException: Key "font-settings" was already used`），同时 `customize.sh` 的保留逻辑把用户字体写进了 BOM 目录，metamodule 再用干净包覆盖活动目录，字体就丢了。现在：`module.prop` 为无 BOM 的 UTF-8；`package-font-settings.ps1` 打包前校验 BOM 并拒绝打包；用户上传的字体与元数据同步到模块目录之外的持久备份 `/data/adb/font-settings/`（安装时由 `customize.sh` 恢复、开机由 `post-fs-data.sh` 补回），模块目录被整体替换也不会丢；内置 WebUI 服务改从稳定副本 `/data/adb/font-settings/webui` 提供（模块目录被替换后，运行中的 httpd 原本会因为工作目录失效而对所有请求返回 404）；`service.sh` 开机还会清理与活动版本相同的 `modules_update` 残留副本——它是管理器闪退的直接触发器。
-v2.4.2 修复"WebUI 显示连线失败但命令其实可用"的情况。模块更新安装后 `modules_update/font-settings` 会与活动目录同时存在（部分 metamodule 会热应用更新并保留该目录），而其中的脚本可能还没有可执行位，界面却优先使用它，于是每条命令都返回 `Permission denied`、界面报连线失败。现在页面只会选择 `tools/fontctl.sh` 真正可执行的目录（优先已应用的更新目录，否则回退活动目录），并在遇到权限类错误时自动 `chmod` 两个候选目录后重试一次；`service.sh` 开机自愈也同时修复两个目录的权限。
-v2.4.1 修复 v2.4.0 新界面"卡死 / 图标不显示 / 组件逻辑混乱"三个问题。**卡死**的根因是预览面板与路径导入会把整个字体文件经 root bridge 读进 WebView——一个 10 MB 的中文字体变成约 14 MB 的 JavaScript 字符串，WebView 直接卡住；现在预览面板只展示字族名称与元数据（大小、可变/静态、链序），路径导入改为 512 KiB 分块读取并显示进度，任何大对象都不再跨桥，`ui-smoke` 与 `live-check` 都加入了"零字体字节传输"的回归断言。**图标**改为把 Material Symbols Rounded 与 Roboto Flex 以 `data:` URI 内联进 `fonts.css`，不再受宿主对 `.woff2` 的 MIME 处理影响（KernelSU 与 KsuWebUI 对未知扩展名回退 `text/plain`）。**交互**简化：缺字回退改成列表行内开关（不再跳转独立页面）、菜单顶部新增连线/待重启/处理中状态标签与重新整理按钮、预览下拉只列出该角色真实存在的字族（系统预设 + 模块字体链），不再列出无法操作的设备字族。
 v2.4.0 按 Material 3 Expressive 重写整个 WebUI。前端改为独立源码目录 `webui/`，用 esbuild 打包成单个离线 `app.js`，组件全部来自 Google 官方 Material Web（列表、FAB、下拉、对话框、滑杆、开关、输入框、进度），字体改为本地 `Roboto Flex` 可变字体与按需裁剪的 `Material Symbols Rounded`；页面结构变为 `字型設定` / `中文字型` / `西文字型` 三屏加 `Emoji 設定`、`缺字回退` 两个设置页，中文字型从右滑入、西文字型从左滑入，返回时反向播放（含系统返回手势）；新增 380×220dp 预览面板与「已有字族」exposed dropdown（选项来自字体链真实字体文件与设备字族），列表改为 M3 Expressive 分段样式（72dp 行高、3dp 间隔、28/8dp 圆角），重启 FAB 叠放在「關於」列表组上；配色改为「可取用系统强调色、取不到时回退到文档指定的紫色方案」，浅色/深色跟随系统。上传、删除、拖拽排序、字重/字号滑杆、Emoji 选择等原有功能保持不变，浏览器本地状态改用 IndexedDB 持久化。
 
 v2.3.6 修复删除全部字体后无法恢复系统默认、个别用户重启不开机的问题。此前把所有中英文字体删除后，链为空时生成器仍会回退引用模块自带的默认字体文件（这些文件已随删除一并移除），生成的字型 XML 会指向不存在的文件，部分设备重启时因此卡在开机界面；同时删光字体也并不能真正回到系统默认（配置仍注入内置字体）。现在链为空时生成器原样输出设备原始字族——不引用任何缺失文件，重启后即为系统默认字体，WebUI 的计数处会提示“使用系统默认字体（重启后生效）”。另外修复了模块升级偶发丢失全部上传字体的问题：`customize.sh` 之前只在内置默认字体仍存在时才保留字体链，删除过默认字体的用户（链中只剩 `-N` 槽位文件）升级后上传字体被静默清空，现在只要模块目录里有任何已上传字体都会完整保留。
@@ -138,7 +133,7 @@ WebUI 已按 Material 3 Expressive 重写，使用 Google 官方的 Material Web
 
 列表为 M3 Expressive 分段样式：行高 72dp、行间 3dp、组外圆角 28dp、相邻内侧圆角 8dp，行内 24dp 图标放在 40dp 的 `primaryContainer` 圆形上，作者一行整体使用 `primaryContainer` / `onPrimaryContainer`。重启按钮是叠放在「關於」列表组之上、垂直居中靠右的 `power_settings_new` 色调 FAB（`primaryContainer`，56dp／16dp 圆角，Level 3 阴影）；字体页的新增按钮是右下角悬浮的 `add` FAB。图标按钮为 56dp 圆形（M 尺寸），文字使用 Roboto Flex 的 emphasized 字重（标题 28sp / wght 700，区段标签 16sp / wght 600）。
 
-字体页包含一个预览面板：`380×220dp` 的 `surfaceContainerHigh` 容器（28dp 圆角）显示样张，标签为「已有字族」的填充式 exposed dropdown（56dp 高，箭头 `arrow_drop_down`，展开项 48dp、`surfaceContainer`、4dp 圆角）横跨容器下缘并绘制在其前方。下拉选项只列出该角色真实存在的字族——系统预设与模块字体链，选择后显示该字族的名称、大小与类型（可变/静态，并标注链序）。面板不会从设备读取字体字节，因此瞬时响应、不会拖住界面。上传、删除、拖拽排序、字重与字号滑杆、缺字回退开关、Emoji 预设选择与 Emoji 自订上传都在新界面内完成；上传时页面显示线性进度，删除会先弹确认对话框并提示“删除全部字型会回到系统预设”。
+字体页包含一个预览面板：`380×220dp` 的 `surfaceContainerHigh` 容器（28dp 圆角）显示样张，标签为「已有字族」的填充式 exposed dropdown（56dp 高，箭头 `arrow_drop_down`，展开项 48dp、`surfaceContainer`、4dp 圆角）横跨容器下缘并绘制在其前方。下拉选项来自字体链中已上传的字体（选中时通过 root bridge 读取真实字体文件并以 `FontFace` 载入，样张即真实字形）以及设备字体配置里声明的字族（中文字体页优先 CJK 字族，西文字体页列出西文字族）。上传、删除、拖拽排序、字重与字号滑杆、缺字回退开关、Emoji 预设选择与 Emoji 自订上传都在新界面内完成；上传时页面显示线性进度，删除会先弹确认对话框并提示“删除全部字型会回到系统预设”。
 
 浏览器本地状态（预览选择、最近的导入路径、设备字族与状态的缓存、本机活动记录）保存在 IndexedDB，重新载入后仍在；取不到数据时显示空状态与操作提示。当 WebUI 由未实现系统文件选择器的宿主承载（如 Magisk 上的 KsuWebUIStandalone 或 MMRL）时，点击“添加字体”与 Emoji“自定义文件”会先尝试打开系统选择器，宿主约 1 秒内无响应才弹出路径导入对话框：粘贴绝对路径即可从设备读取字体。
 
@@ -159,7 +154,7 @@ WebUI 已按 Material 3 Expressive 重写，使用 Google 官方的 Material Web
 - 可变字体字重以 `data/<role>.weight` 保存，范围 `100` 到 `900`，默认 `400`。生成器为可变字体的每个槽位把 `wght` 轴值改写为“原槽位字重 + 设定字重 − 400”并钳制到 `100`–`900`，静态字体节点不受影响。
 - 浏览器以 80 KiB 分块通过 KernelSU root bridge 写入临时文件；两端都支持时使用 gzip 压缩传输（`base64 -d | gzip -dc` 解压追加），否则回退原始 base64 分块。分块大小保证编码后的指令长度低于 `execve` 的 128 KiB 参数上限。
 - 路径导入时，页面先经 root bridge 以 `stat` 校验文件并以 `base64` 读回字节，再复用与系统选择器相同的校验、cmap 隔离与分块上传管线。
-- `service.sh` 开机后启动内置 WebUI 服务：busybox httpd 只绑定 `127.0.0.1:7125`，根目录为模块目录之外的稳定副本 `/data/adb/font-settings/webui`（模块更新替换 webroot 时不会让运行中的守护进程失效）；busybox 依次探测 Magisk（`/data/adb/magisk/busybox`）、KernelSU（`/data/adb/ksu/bin/busybox`）与 APatch（`/data/adb/ap/bin/busybox`）位置。启动时还会自愈：恢复 `fontctl.sh`、`fontconfig.sh` 与 `cgi-bin/exec` 的可执行位、在字体配置备份缺失时重新捕获系统字体 XML、清理已应用版本残留的 `modules_update` 副本（否则 KernelSU 管理器会因模块重复而闪退）。
+- `service.sh` 开机后启动内置 WebUI 服务：busybox httpd 只绑定 `127.0.0.1:7125`，根目录为模块 `webroot`；busybox 依次探测 Magisk（`/data/adb/magisk/busybox`）、KernelSU（`/data/adb/ksu/bin/busybox`）与 APatch（`/data/adb/ap/bin/busybox`）位置。启动时还会自愈：恢复 `fontctl.sh`、`fontconfig.sh` 与 `cgi-bin/exec` 的可执行位，并在字体配置备份缺失时重新捕获系统字体 XML。
 - 页面通过 `window.ksu` 探测桥接能力：缺少 KernelSU bridge（如用浏览器访问内置服务）时，自动改用 `POST http://127.0.0.1:7125/cgi-bin/exec`，由 busybox httpd 的 CGI 以 root 执行命令并返回“退出码 + 输出”。
 - 点击“添加字体”先尝试系统文件选择器；宿主约 1 秒内没有任何页面可见性/取消/变更信号（未实现 `onShowFileChooser`）时才回退到路径导入对话框。
 - 上传前由浏览器重建字体的 Unicode `cmap` 并重算 SFNT 校验和；其他字体表和字形数据保持不变。
@@ -179,13 +174,9 @@ adb shell su -c 'touch /data/adb/modules/font-settings/disable'
 adb reboot
 ```
 
-如果 WebUI 顶部显示「連線失敗」：先点右上角的重新整理；仍失败时确认模块目录内的 `tools/fontctl.sh` 可执行（v2.4.3 起页面会自动修复权限并重试一次），或改用手机浏览器打开 `http://127.0.0.1:7125`（模块内置服务，不依赖任何宿主应用）。
+如果 WebUI 显示“KernelSU 连接失败”，请确认页面是从 KernelSU 模块列表打开，而不是使用普通浏览器直接打开 `index.html`。
 
 如果页面提示字体模块冲突，请停用提示中的模块后重启。`Font Loader` 仅提供字体预加载能力，不挂载字体 XML，因此不被视为冲突模块。
-
-如果 KernelSU 管理器打开就闪退，并在崩溃日志里看到 `IllegalArgumentException: Key "font-settings" was already used`，说明模块同时存在于 `modules/` 与 `modules_update/`，管理器把模块列了两次。重启一次（或删除 `/data/adb/modules_update/font-settings`）即可恢复；v2.4.3 起 `service.sh` 会在开机时自动清理这种已应用版本的残留副本。
-
-如果升级后发现上传的字体没了：v2.4.3 起上传的字体与元数据会同步到 `/data/adb/font-settings/`，升级时会自动恢复；该目录也可作为卸载前的备份来源。
 
 ## 项目结构
 
@@ -263,7 +254,7 @@ node tests/upload-transfer-test.cjs
 node webui/tests/ui-smoke.mjs     # 无头界面冒烟测试（35 项断言）
 ```
 
-需要复核视觉时用 `node webui/tests/screenshots.mjs`（输出到 `webui/.screenshots/`，浅色与深色各屏幕）。真机验证模块自带 WebUI 服务时，用设备上的 busybox httpd 托管构建产物再跑 `node webui/tests/device-check.mjs`（需先 `adb forward tcp:7131 tcp:7131`），它会检查设备实际返回的 MIME、离线字体加载、图标连字与首屏结构；`node webui/tests/live-check.mjs` 则在 `adb forward tcp:7125 tcp:7125` 后直接对真机运行中的 WebUI 服务做端到端校验（真实 root 桥、真实字体链数据）。字体配置转换器夹具测试需要在 Android shell 中运行：
+需要复核视觉时用 `node webui/tests/screenshots.mjs`（输出到 `webui/.screenshots/`，浅色与深色各屏幕）。真机验证模块自带 WebUI 服务时，用设备上的 busybox httpd 托管构建产物再跑 `node webui/tests/device-check.mjs`（需先 `adb forward tcp:7131 tcp:7131`），它会检查设备实际返回的 MIME、离线字体加载、图标连字与首屏结构。字体配置转换器夹具测试需要在 Android shell 中运行：
 
 ```sh
 sh tests/fontconfig-test.sh
@@ -281,7 +272,7 @@ sh tests/fontconfig-test.sh
 ## 许可与来源
 
 - 界面组件使用 Google Material Web 2.4.0（Apache License 2.0）；`about` 与 `donate` 页面仍使用 MDUI 2.1.5（MIT License，`webroot/vendor/MDUI-LICENSE.txt`）。
-- 字体：Roboto Flex 与 Material Symbols Rounded 取自 Google Fonts，Apache License 2.0，已按用到的字符与图标子集化，并在构建时以 `data:` URI 内联进 `webroot/assets/fonts/fonts.css`（不依赖宿主对 `.woff2` 的 MIME 处理）。
+- 字体：Roboto Flex 与 Material Symbols Rounded 取自 Google Fonts，Apache License 2.0，已按用到的字符与图标子集化并离线打包在 `webroot/assets/fonts/`。
 - 动态色板使用 Google Material Color Utilities 0.3.0，Apache License 2.0 已包含在 `webroot/vendor/MaterialColorUtilities-LICENSE.txt`。
 - 动态生成器只使用安装设备自身的 Android 字体配置，不再内置或分发任何特定 ROM 的 XML。
 - 使用或分发自定义字体前，请自行确认对应字体授权。

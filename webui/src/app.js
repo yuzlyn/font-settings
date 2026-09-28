@@ -46,12 +46,17 @@ import {
   hideMessage,
   pathDialog,
 } from "./ui.js";
-import { buildMenuScreen, openStatusDialog } from "./screens/menu.js";
+import { buildMenuScreen } from "./screens/menu.js";
 import { buildEmojiScreen } from "./screens/emoji.js";
 import { buildRoleScreen, openFontDetailDialog } from "./screens/role.js";
+import { buildAboutScreen, openStatusDialog } from "./screens/about.js";
+import { buildReadmeScreen } from "./screens/readme.js";
+import { buildNavBar, syncNavBar, TAB_IDS } from "./chrome.js";
 
 const stackHost = document.querySelector("[data-screen-stack]");
+const fabLayer = document.querySelector("[data-fab-layer]");
 const bootProgress = document.querySelector("[data-boot-progress]");
+let navBar = null;
 
 const state = {
   status: null,
@@ -66,7 +71,9 @@ const state = {
 };
 
 const screens = {
-  menu: { id: "menu", build: () => buildMenuScreen(ctx) },
+  menu: { id: "menu", tab: true, build: () => buildMenuScreen(ctx) },
+  readme: { id: "readme", tab: true, build: () => buildReadmeScreen(ctx) },
+  about: { id: "about", tab: true, build: () => buildAboutScreen(ctx) },
   chinese: { id: "chinese", build: () => buildRoleScreen(ctx, "chinese") },
   latin: { id: "latin", build: () => buildRoleScreen(ctx, "western") },
   emoji: { id: "emoji", build: () => buildEmojiScreen(ctx) },
@@ -81,12 +88,31 @@ function opposite(direction) {
   return direction === "left" ? "right" : "left";
 }
 
+/**
+ * Screens register their own floating action button in the shared FAB layer
+ * (a sibling of the screen stack, outside every transformed/scrolling ancestor),
+ * so a FAB stays pinned to the bottom-right corner while the screen scrolls.
+ * Only the button of the visible screen is shown; screens are matched by their
+ * `data-screen` name, not by the router id (the Latin screen is `latin` in the
+ * stack but `western` everywhere else).
+ */
+function syncFabs(element) {
+  if (!fabLayer) return;
+  const active = element?.dataset.screen ?? "";
+  for (const fab of fabLayer.querySelectorAll("[data-fab-owner]")) {
+    fab.dataset.active = String(fab.dataset.fabOwner === active);
+  }
+  syncNavBar(navBar, active);
+}
+
 function renderScreen(id, { entering = null, leaving = null, direction = "right", replay = true } = {}) {
   const definition = screens[id];
   if (!definition) return null;
   const cached = screenCache.get(id);
   const element = cached ? cached.element : definition.build();
   screenCache.set(id, { element, stamp: state.statusStamp });
+  // The screen may have created its FAB while building, so sync afterwards.
+  syncFabs(element);
   if (entering) element.classList.add(`screen-enter-from-${entering}`);
   // A cached screen may still be hidden from an earlier transition.
   element.hidden = false;
@@ -127,39 +153,63 @@ function renderScreen(id, { entering = null, leaving = null, direction = "right"
   return element;
 }
 
-function navigate(id, { direction = "right", push = true } = {}) {
+function pushHistory(id) {
+  try {
+    history.pushState({ screenId: id }, "", `#${id}`);
+  } catch {
+    // history may be unavailable in some hosts; navigation still works.
+  }
+}
+
+function replaceHistory(id) {
+  try {
+    history.replaceState({ screenId: id }, "", `#${id}`);
+  } catch {
+    // ignore
+  }
+}
+
+/** Pushes a secondary screen (漢字字型 / 拉丁文字型 / Emoji) onto the stack. */
+function navigate(id, { direction = "right" } = {}) {
   const current = navigationStack.at(-1);
   if (current?.id === id) return;
   navigationStack.push({ id, direction });
   const outgoing = current ? screenCache.get(current.id)?.element : null;
   const element = renderScreen(id, { entering: direction, leaving: outgoing, direction: opposite(direction) });
   element?.update?.(state);
-  if (push) {
-    try {
-      history.pushState({ screenId: id }, "", `#${id}`);
-    } catch {
-      // history may be unavailable in some hosts; navigation still works.
-    }
-  }
+  pushHistory(id);
+}
+
+/** Switches between the three top-level tabs (字型 / 介紹 / 關於). */
+function switchTab(id) {
+  const current = navigationStack.at(-1);
+  if (current?.id === id) return;
+  const currentIndex = TAB_IDS.indexOf(current?.id);
+  const targetIndex = TAB_IDS.indexOf(id);
+  // The slide direction follows the relative tab position: clicking a tab on
+  // the right slides the new page in from the left (content moves left-to-right),
+  // and clicking a tab on the left is the reverse.
+  const entering = targetIndex > currentIndex ? "left" : "right";
+  const direction = opposite(entering);
+  const outgoing = current ? screenCache.get(current.id)?.element : null;
+  navigationStack.length = 0;
+  navigationStack.push({ id, direction });
+  const element = renderScreen(id, { entering, leaving: outgoing, direction });
+  element?.update?.(state);
+  replaceHistory(id);
 }
 
 function goBack() {
   const current = navigationStack.at(-1);
-  // Back always lands on the menu: a secondary screen must never be a dead end
-  // (the app used to restore the last screen, leaving the stack with a single
-  // entry so the back button and gesture just closed the WebUI).
+  // Back always lands on the 字型 tab: a secondary screen (or the README / About
+  // tabs) must never be a dead end, so the back gesture always has somewhere to go.
   if (current && current.id !== "menu") {
     const outgoing = screenCache.get(current.id)?.element;
     navigationStack.length = 0;
     navigationStack.push({ id: "menu", direction: "right" });
     const incoming = renderScreen("menu", { entering: "left", leaving: outgoing, direction: "right" });
     incoming?.update?.(state);
-    try {
-      history.replaceState({ screenId: "menu" }, "", "#menu");
-    } catch {
-      // ignore
-    }
-    return;
+    replaceHistory("menu");
   }
 }
 
@@ -492,6 +542,7 @@ const ctx = {
   t,
   actions: {
     navigate,
+    switchTab,
     back: goBack,
     refresh,
     addFont,
@@ -533,6 +584,10 @@ async function boot() {
 
   // Always start on the menu: restoring the last screen made secondary screens
   // the root of the navigation stack, so back had nothing to return to.
+  // Build the shared bottom navigation bar once ctx (its click handlers) exists.
+  navBar = buildNavBar(ctx);
+  document.querySelector(".app-surface")?.append(navBar);
+
   const initial = "menu";
   navigationStack.push({ id: initial, direction: "right" });
   try {

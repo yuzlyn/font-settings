@@ -78,9 +78,12 @@ const report = await page.evaluate(() => ({
     return { text: icon.textContent.trim(), width: Math.round(rect.width) };
   })(),
   fabRadius: (() => {
-    const part = document.querySelector("md-fab")?.shadowRoot?.querySelector(".fab");
+    const part = document.querySelector(".screen-stack md-fab")?.shadowRoot?.querySelector(".fab");
     return part ? parseFloat(getComputedStyle(part).borderTopLeftRadius) : 0;
   })(),
+  // The menu has no FAB at all; secondary screens put theirs in the shared layer.
+  menuFabs: document.querySelectorAll(".screen-stack md-fab, [data-fab-layer] md-fab").length,
+  fabLayer: Boolean(document.querySelector("[data-fab-layer]")),
   theme: document.documentElement.dataset.theme,
   overflowX: document.documentElement.scrollWidth - window.innerWidth,
 }));
@@ -95,7 +98,8 @@ const ok =
   report.robotoFlex &&
   report.symbols &&
   report.iconGlyph.width <= 40 &&
-  report.fabRadius === 16 &&
+  report.menuFabs === 0 &&
+  report.fabLayer &&
   report.overflowX <= 0 &&
   errors.length === 0;
 
