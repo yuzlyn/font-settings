@@ -1,15 +1,17 @@
 # Font Settings
 
 - 作者：**yuzlyn**
-- 版本：**v2.4.4**
+- 版本：**v2.4.5**
 - 模块 ID：`font-settings`
 
 这是一个适用于 Android 8.0+ 的通用 KernelSU 字体模块，不限定手机品牌或 ROM。模块提供离线 WebUI，中文与西文各自可上传多个 `.ttf` 字体并按顺序组成 font-family 回退链（缺字自动回退，支持拖拽排序），上传可变字体后可调节 `100`–`900` 字重，并可选择内置 iOS、Google、Blobmoji、Facebook Emoji 或上传自定义 `.ttf/.otf`。所有替换均通过 KernelSU systemless mount 生效，不直接修改系统分区。
 
 ## 下载
 
-- 完整包：[font-settings_v2.4.4_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.4/font-settings_v2.4.4_KSU.zip)，`179,036,143` 字节，SHA-256：`53D36A2D23E37E80C18B483D3B898C92E55677CA91A43DD29827757BC5C56FAC`。
-- 精简包：[font-settings_v2.4.4_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.4/font-settings_v2.4.4_lite_KSU.zip)，`33,315,416` 字节，SHA-256：`0DA1DC9B63C53051EFAC92A0E4AF6A9CB96F0EFEA21128F0FB1FB3A950F61462`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+- 完整包：[font-settings_v2.4.5_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.5/font-settings_v2.4.5_KSU.zip)，`179,034,869` 字节，SHA-256：`FE024EAC5D6C0958AB82C7FA3153743382C6DAF896E1DDAD72CC1B5A222AF6FF`。
+- 精简包：[font-settings_v2.4.5_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.5/font-settings_v2.4.5_lite_KSU.zip)，`33,314,142` 字节，SHA-256：`FD3EDC25FC832D3387622515041C9769D6E7EAAA0F8FE0606B41E026F7A9C892`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+
+v2.4.5 修复二级页面退不回主页、并精简二级页面。原因是应用会把上次所在的屏幕存下来、下次直接恢复到该屏幕，于是二级页成了导航栈的根：返回键/返回手势只会关闭 WebUI，界面上的返回箭头也没有上一页可退。现在始终从「字型設定」主页面启动，任何二级页面的返回箭头与系统返回手势都固定回到主页面。同时按要求去掉了二级页面上的下拉选单（预览面板与「已有字族」exposed dropdown 整体移除），改为一行「N 個字型 · 可變/靜態」摘要；并为页面容器加上 `overflow-x: hidden`，保证 412dp 宽度下不出现横向溢出。
 
 v2.4.4 修复 KernelSU 管理器里打开 WebUI 白屏。根因是界面脚本以 ES module（`<script type="module">`）加载：KernelSU 的静态资源处理器用**带查询串的文件名**猜 MIME（`app.js?v=243` 匹配不到已知扩展名），回退成 `text/plain`，而 ES module 在 MIME 不符时会被浏览器直接拒绝 → 白屏；同一份文件作为经典脚本则照常执行（旧版 MDUI 界面正是经典脚本，所以此前没暴露）。现在打包改为 IIFE 经典脚本（`--format=iife` + `<script defer>`），不再依赖宿主的 MIME 判定。同时新增 WebUI 自检：页面启动、bundle 执行、资源加载失败与未捕获异常都会写入 `/data/adb/font-settings/webui-error.log` 并在页面上显示可读错误；`service.sh` 开机还会清掉残留的 `update` 标记（它会让管理器一直显示"待更新"）并重置自检日志。
 

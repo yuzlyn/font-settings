@@ -63,11 +63,25 @@ const chinese = await page.evaluate(() => {
       meta: row.querySelector(".chain-meta")?.textContent.trim(),
     })),
     weightSlider: String(screen?.querySelector("md-slider")?.value),
-    previewOptions: screen?.querySelectorAll(".preview-panel md-select-option").length,
-    caption: screen?.querySelector(".preview-caption")?.textContent.trim(),
+    hasMenu: Boolean(screen?.querySelector("md-filled-select, md-menu")),
+    summary: screen?.querySelector("[data-summary]")?.textContent.replace(/\s+/g, " ").trim(),
+    overflowX: document.documentElement.scrollWidth - window.innerWidth,
   };
 });
 console.log("chinese screen (real device data):", JSON.stringify(chinese, null, 2));
+
+// The back arrow must return to the menu (secondary screens used to be dead
+// ends when the app restored them as the root screen).
+const backToMenu = await page.evaluate(async () => {
+  document.querySelector("section[data-screen='chinese'] [data-back]").click();
+  await new Promise((resolve) => setTimeout(resolve, 800));
+  return {
+    menuVisible: document.querySelector("section[data-screen='menu']")?.hidden === false,
+    hash: location.hash,
+  };
+});
+console.log("back arrow:", JSON.stringify(backToMenu));
+
 const byteCommands = bridgeCommands.filter((command) => command.startsWith("base64 "));
 console.log("bridge commands:", bridgeCommands.length, "| font byte transfers:", byteCommands.length);
 console.log("screen render time:", `${elapsed} ms`);
@@ -82,8 +96,10 @@ const ok =
   chinese.title === "中文字型" &&
   chinese.rows.length > 0 &&
   chinese.rows.every((row) => /^#\d+ · [\d.]+ (B|KB|MB) · (可變字型|靜態字型)$/.test(row.meta)) &&
-  chinese.previewOptions === chinese.rows.length + 1 &&
-  Boolean(chinese.caption) &&
+  chinese.hasMenu === false &&
+  Boolean(chinese.summary) &&
+  chinese.overflowX <= 0 &&
+  backToMenu.menuVisible === true &&
   byteCommands.length === 0 &&
   elapsed < 4000 &&
   errors.length === 0;

@@ -196,10 +196,8 @@ try {
       title: screen?.querySelector(".screen-title")?.textContent.trim(),
       enterClass: screen?.className,
       chainRows: screen?.querySelectorAll(".chain-row").length,
-      previewPanel: Boolean(screen?.querySelector(".preview-panel")),
-      previewSelect: Boolean(screen?.querySelector(".preview-panel md-filled-select")),
-      previewOptions: screen?.querySelectorAll(".preview-panel md-select-option").length,
-      sampleFont: screen?.querySelector("[data-sample]")?.style.fontFamily.slice(0, 40),
+      hasMenu: Boolean(screen?.querySelector("md-filled-select, md-menu")),
+      summary: screen?.querySelector("[data-summary] .role-card-head")?.textContent.replace(/\s+/g, " ").trim(),
       sliders: [...(screen?.querySelectorAll("md-slider") ?? [])].map((slider) => String(slider.value)),
       hash: location.hash,
     };
@@ -207,45 +205,36 @@ try {
   check("chinese screen exists and is visible", chinese.exists && !chinese.hidden, JSON.stringify(chinese));
   check("chinese screen titled 中文字型", chinese.title === "中文字型", chinese.title);
   check("chinese screen lists the chain", chinese.chainRows === 2, `rows=${chinese.chainRows}`);
-  check("preview panel with exposed dropdown", chinese.previewPanel && chinese.previewSelect && chinese.previewOptions === 3, JSON.stringify(chinese));
+  check("secondary screen has no dropdown menu", chinese.hasMenu === false, JSON.stringify(chinese));
+  check("secondary screen shows a font count summary", /2/.test(chinese.summary || ""), chinese.summary);
   check("weight slider reflects module value 650", chinese.sliders.includes("650"), JSON.stringify(chinese.sliders));
   check("hash reflects the screen", chinese.hash === "#chinese", chinese.hash);
 
-  const slug = await page.evaluate(() => {
-    const screen = document.querySelector("section[data-screen='chinese']");
-    return screen.querySelector(".preview-caption")?.textContent.trim();
-  });
-  check("preview caption names the family", Boolean(slug), slug);
-
   const material = await page.evaluate(() => {
     const screen = document.querySelector("section[data-screen='chinese']");
-    const canvas = screen.querySelector(".preview-canvas");
-    const canvasRect = canvas.getBoundingClientRect();
-    const select = screen.querySelector(".preview-panel md-filled-select");
-    const selectRect = select.getBoundingClientRect();
     const icon = screen.querySelector("md-icon");
     const iconRect = icon.getBoundingClientRect();
     const iconButton = screen.querySelector("md-icon-button");
     const buttonRect = iconButton.getBoundingClientRect();
     const title = screen.querySelector(".screen-title");
     const chainRow = screen.querySelector(".chain-row");
+    const offenders = [...screen.querySelectorAll("*")]
+      .map((element) => ({ element, rect: element.getBoundingClientRect() }))
+      .filter(({ rect }) => rect.width > 0 && (rect.right > window.innerWidth + 1 || rect.left < -1))
+      .map(({ element }) => element.tagName.toLowerCase());
     return {
       robotoFlex: document.fonts.check('16px "Roboto Flex"'),
       symbols: document.fonts.check('24px "Material Symbols Rounded"'),
       iconFont: getComputedStyle(icon).fontFamily,
       iconWidth: iconRect.width,
       iconIsLigature: icon.textContent.trim().length > 1 && iconRect.width <= 40,
-      canvasHeight: canvasRect.height,
-      canvasRadius: parseFloat(getComputedStyle(canvas).borderTopLeftRadius),
-      canvasColor: getComputedStyle(canvas).backgroundColor,
-      selectOverlapsCanvas: selectRect.top < canvasRect.bottom && selectRect.bottom > canvasRect.bottom,
-      selectHeight: selectRect.height,
       iconButtonSize: [buttonRect.width, buttonRect.height],
       iconButtonRadius: parseFloat(getComputedStyle(iconButton).borderTopLeftRadius),
       titleVariation: getComputedStyle(title).fontVariationSettings,
       titleWeight: getComputedStyle(title).fontWeight,
       chainRowHeight: chainRow ? chainRow.getBoundingClientRect().height : 0,
       overflowX: document.documentElement.scrollWidth - window.innerWidth,
+      offenders,
     };
   });
   check("Roboto Flex and Material Symbols load offline", material.robotoFlex && material.symbols, JSON.stringify(material));
@@ -260,32 +249,39 @@ try {
     JSON.stringify({ variation: material.titleVariation, weight: material.titleWeight }),
   );
   check(
-    "preview canvas is 220dp tall surfaceContainerHigh with 28dp corners",
-    Math.round(material.canvasHeight) === 220 &&
-      material.canvasRadius === 28 &&
-      material.canvasColor === "rgb(236, 230, 240)",
-    JSON.stringify({ h: material.canvasHeight, r: material.canvasRadius, c: material.canvasColor }),
-  );
-  check(
-    "dropdown overlaps the container and is 56dp tall",
-    material.selectOverlapsCanvas && Math.round(material.selectHeight) === 56,
-    JSON.stringify({ overlap: material.selectOverlapsCanvas, height: material.selectHeight }),
+    "nothing overflows the secondary screen",
+    material.overflowX <= 0 && material.offenders.length === 0,
+    JSON.stringify({ overflowX: material.overflowX, offenders: material.offenders }),
   );
   check(
     "icon button is a 56dp circle",
-    material.iconButtonSize.every((size) => Math.round(size) === 56) && String(material.iconButtonRadius) === "50%" || material.iconButtonRadius >= 28,
+    material.iconButtonSize.every((size) => Math.round(size) === 56) &&
+      (String(material.iconButtonRadius) === "50%" || material.iconButtonRadius >= 28),
     JSON.stringify({ size: material.iconButtonSize, radius: material.iconButtonRadius }),
   );
-  check("no horizontal overflow at 412dp", material.overflowX <= 0, String(material.overflowX));
 
-  // back via the system/history gesture
+  // the on-screen back arrow must return to the menu
+  await page.evaluate(() => document.querySelector("section[data-screen='chinese'] [data-back]").click());
+  await page.waitForTimeout(700);
+  const afterArrow = await page.evaluate(() => ({
+    menuHidden: document.querySelector("section[data-screen='menu']")?.hidden,
+    hash: location.hash,
+  }));
+  check("back arrow returns to the menu", afterArrow.menuHidden === false && afterArrow.hash === "#menu", JSON.stringify(afterArrow));
+
+  // and so must the system back gesture from a secondary screen
+  await page.evaluate(() => {
+    const rows = [...document.querySelectorAll("section[data-screen='menu'] md-list-item")];
+    rows[1].click();
+  });
+  await page.waitForTimeout(700);
   await page.goBack();
   await page.waitForTimeout(700);
-  const afterBack = await page.evaluate(() => ({
+  const afterGesture = await page.evaluate(() => ({
     menuHidden: document.querySelector("section[data-screen='menu']")?.hidden,
-    chineseHidden: document.querySelector("section[data-screen='chinese']")?.hidden,
+    screens: [...document.querySelectorAll("section.screen")].map((s) => `${s.dataset.screen}${s.hidden ? "(hidden)" : ""}`),
   }));
-  check("back returns to the menu", afterBack.menuHidden === false, JSON.stringify(afterBack));
+  check("back gesture returns to the menu", afterGesture.menuHidden === false, JSON.stringify(afterGesture));
 
   // 西文字型 -> slides in from the left, empty state
   await page.evaluate(() => {

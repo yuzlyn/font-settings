@@ -2,7 +2,6 @@
 
 import { t } from "../i18n.js";
 import { formatBytes, normalizeWeight, normalizeWesternSize } from "../module-api.js";
-import { buildPreviewPanel } from "../components/preview-panel.js";
 import {
   confirmDialog,
   el,
@@ -50,7 +49,7 @@ export function buildRoleScreen(ctx, role) {
     </header>
     <div class="screen-content">
       <h2 class="section-label typescale-title-medium-emphasized">${escapeHtml(t("editFamily"))}</h2>
-      <div data-preview></div>
+      <div data-summary></div>
       <div data-progress hidden>
         <md-linear-progress indeterminate></md-linear-progress>
       </div>
@@ -62,29 +61,32 @@ export function buildRoleScreen(ctx, role) {
 
   screen.querySelector("[data-back]").addEventListener("click", () => ctx.actions.back());
 
-  const previewHost = screen.querySelector("[data-preview]");
+  const summaryHost = screen.querySelector("[data-summary]");
   const chainHost = screen.querySelector("[data-chain]");
   const sliderHost = screen.querySelector("[data-sliders]");
   const progressHost = screen.querySelector("[data-progress]");
   const fabHost = screen.querySelector("[data-fab]");
 
-  let previewSignature = null;
+  let summarySignature = null;
   let chainSignature = null;
   let sliderSignature = null;
 
-  function renderPreview() {
-    const selected = ctx.state.preview[role];
-    const signature = `${chain.map((font) => `${font.name}:${font.size}`).join(",")}|${selected}`;
-    if (signature === previewSignature) return;
-    previewSignature = signature;
-    previewHost.textContent = "";
-    previewHost.append(
-      buildPreviewPanel({
-        role,
-        chain,
-        selected,
-        onSelect: (value) => ctx.actions.selectPreview(role, value),
-      }),
+  function renderSummary() {
+    const signature = `${chain.length}|${chain.some((font) => font.variable)}`;
+    if (signature === summarySignature) return;
+    summarySignature = signature;
+    summaryHost.textContent = "";
+    summaryHost.append(
+      el(`<div class="role-card">
+        <div class="role-card-head">
+          <span class="typescale-title-medium-emphasized">${escapeHtml(
+            chain.length ? t("fontCountUnitCount", { count: chain.length }) : t("fontCountEmpty"),
+          )}</span>
+          <span class="typescale-body-medium">${escapeHtml(
+            chain.some((font) => font.variable) ? t("variableFont") : t("staticFont"),
+          )}</span>
+        </div>
+      </div>`),
     );
   }
 
@@ -176,7 +178,7 @@ export function buildRoleScreen(ctx, role) {
     status = next.status;
     chain = status ? status.chains[role] : [];
     hasVariable = chain.some((font) => font.variable);
-    renderPreview();
+    renderSummary();
     renderChain();
     renderSliders();
 
@@ -276,7 +278,6 @@ export async function openFontDetailDialog(ctx, role, font, index, total) {
       <div class="status-line"><span class="typescale-body-medium">${escapeHtml(t("fontDetailSlot"))}</span><span class="spacer"></span><span class="typescale-body-large">#${index + 1} / ${total}</span></div>
     </div>
     <div slot="actions" class="dialog-actions">
-      <md-text-button value="details">${escapeHtml(t("previewShowIn"))}</md-text-button>
       <md-text-button value="replace">${escapeHtml(t("replaceFont"))}</md-text-button>
       <md-text-button value="remove" class="danger">${escapeHtml(t("removeFont"))}</md-text-button>
       <md-filled-button value="close">${escapeHtml(t("close"))}</md-filled-button>
@@ -298,8 +299,5 @@ export async function openFontDetailDialog(ctx, role, font, index, total) {
     if (confirmed) await ctx.actions.removeFont(role, font);
   } else if (result === "replace") {
     await ctx.actions.replaceFont(role, font);
-  } else if (result === "details") {
-    await ctx.actions.selectPreview(role, `chain:${font.name}`);
-    showMessage(t("previewCaptionChain", { name: font.displayName }));
   }
 }

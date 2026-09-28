@@ -271,6 +271,7 @@ md-icon {
   display: flex;
   flex-direction: column;
   background-color: var(--md-sys-color-surface);
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   will-change: transform, opacity;
@@ -605,66 +606,6 @@ md-list-item[data-tone="primary-container"] .list-leading {
 
 .press-scale:active {
   transform: scale(0.97);
-}
-
-/* --------------------------------------------- preview panel + dropdown box */
-/* Reference composition from the spec: a 380x220dp surfaceContainerHigh
-   container with a filled exposed dropdown overlapping its lower edge and
-   drawn in front of it. */
-.preview-panel {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  padding-bottom: 28px;
-}
-
-.preview-canvas {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  max-width: 380px;
-  height: 220px;
-  padding: 16px;
-  border-radius: var(--md-sys-shape-corner-extra-large);
-  background-color: var(--md-sys-color-surface-container-high);
-  color: var(--md-sys-color-on-surface);
-  overflow: hidden;
-}
-
-.preview-sample {
-  font-size: 32px;
-  line-height: 1.3;
-  text-align: center;
-  word-break: break-word;
-  max-height: 100%;
-  overflow: hidden;
-}
-
-.preview-caption {
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  bottom: 56px;
-  margin: 0;
-  color: var(--md-sys-color-on-surface-variant);
-}
-
-/* The dropdown straddles the container's lower edge, drawn in front of it. */
-.preview-panel md-filled-select {
-  position: absolute;
-  right: 16px;
-  bottom: 0;
-  width: min(240px, 72%);
-  z-index: 1;
-  --md-filled-select-text-field-container-shape: var(--md-sys-shape-corner-small);
-  --md-filled-select-text-field-container-color: var(
-    --md-sys-color-surface-container-highest
-  );
-  --md-menu-container-color: var(--md-sys-color-surface-container);
-  --md-menu-container-shape: var(--md-sys-shape-corner-extra-small);
-  --md-menu-item-one-line-container-height: 48px;
-  --md-menu-item-label-text-font: var(--app-font-family);
 }
 
 /* ------------------------------------------------------------------- FABs */

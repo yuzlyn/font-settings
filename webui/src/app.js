@@ -57,7 +57,6 @@ const state = {
   status: null,
   statusStamp: 0,
   cachedStatus: false,
-  preview: { chinese: null, western: null },
   error: null,
   busy: false,
   upload: null,
@@ -89,6 +88,8 @@ function renderScreen(id, { entering = null, leaving = null, direction = "right"
   const element = cached ? cached.element : definition.build();
   screenCache.set(id, { element, stamp: state.statusStamp });
   if (entering) element.classList.add(`screen-enter-from-${entering}`);
+  // A cached screen may still be hidden from an earlier transition.
+  element.hidden = false;
   if (!element.isConnected) stackHost.append(element);
 
   if (leaving === null) {
@@ -140,42 +141,26 @@ function navigate(id, { direction = "right", push = true } = {}) {
       // history may be unavailable in some hosts; navigation still works.
     }
   }
-  setState(stateKeys.lastScreen, id);
 }
 
 function goBack() {
-  if (navigationStack.length <= 1) return;
-  const current = navigationStack.pop();
-  const previous = navigationStack.at(-1);
-  const outgoing = screenCache.get(current.id)?.element;
-  const incomingCached = screenCache.get(previous.id);
-  const incoming = incomingCached ? incomingCached.element : screens[previous.id].build();
-  screenCache.set(previous.id, { element: incoming, stamp: state.statusStamp });
-  incoming.hidden = false;
-  incoming.classList.remove("screen-active");
-  incoming.classList.add(`screen-enter-from-${opposite(current.direction)}`);
-  if (!incoming.isConnected) stackHost.append(incoming);
-  incoming.update?.(state);
-  requestAnimationFrame(() => {
-    incoming.classList.add("screen-active");
-    incoming.classList.remove(`screen-enter-from-${opposite(current.direction)}`);
-    if (outgoing) {
-      outgoing.classList.remove("screen-active");
-      outgoing.classList.add(`screen-leave-to-${current.direction}`);
-      outgoing.addEventListener(
-        "transitionend",
-        () => {
-          outgoing.hidden = true;
-          outgoing.classList.remove(`screen-leave-to-${current.direction}`);
-        },
-        { once: true },
-      );
-      window.setTimeout(() => {
-        outgoing.hidden = true;
-        outgoing.classList.remove(`screen-leave-to-${current.direction}`);
-      }, 600);
+  const current = navigationStack.at(-1);
+  // Back always lands on the menu: a secondary screen must never be a dead end
+  // (the app used to restore the last screen, leaving the stack with a single
+  // entry so the back button and gesture just closed the WebUI).
+  if (current && current.id !== "menu") {
+    const outgoing = screenCache.get(current.id)?.element;
+    navigationStack.length = 0;
+    navigationStack.push({ id: "menu", direction: "right" });
+    const incoming = renderScreen("menu", { entering: "left", leaving: outgoing, direction: "right" });
+    incoming?.update?.(state);
+    try {
+      history.replaceState({ screenId: "menu" }, "", "#menu");
+    } catch {
+      // ignore
     }
-  });
+    return;
+  }
 }
 
 /**
@@ -502,12 +487,6 @@ async function reboot() {
   }
 }
 
-async function selectPreview(role, value) {
-  state.preview[role] = value;
-  await setState(stateKeys.preview(role), value);
-  refreshScreens();
-}
-
 const ctx = {
   state,
   t,
@@ -524,7 +503,6 @@ const ctx = {
     setFallback,
     setEmoji,
     reboot,
-    selectPreview,
     bridgeLabelKey: () => (hasKsuBridge ? "connectedKsu" : "connectedLocal"),
     openStatusDialog: () => openStatusDialog(ctx),
     openFontDetail: (role, font, index, total) => openFontDetailDialog(ctx, role, font, index, total),
@@ -544,15 +522,7 @@ async function boot() {
     state.theme = theme;
   });
 
-  const [cachedStatus, previewChinese, previewLatin, lastScreen] = await Promise.all([
-    getState(stateKeys.status, null),
-    getState(stateKeys.preview("chinese"), null),
-    getState(stateKeys.preview("western"), null),
-    getState(stateKeys.lastScreen, "menu"),
-  ]);
-
-  if (previewChinese) state.preview.chinese = previewChinese;
-  if (previewLatin) state.preview.western = previewLatin;
+  const cachedStatus = await getState(stateKeys.status, null);
   if (cachedStatus?.status) {
     state.status = cachedStatus.status;
     state.cachedStatus = true;
@@ -561,7 +531,9 @@ async function boot() {
   document.documentElement.lang = locale;
   document.title = t("appTitle");
 
-  const initial = screens[lastScreen] ? lastScreen : "menu";
+  // Always start on the menu: restoring the last screen made secondary screens
+  // the root of the navigation stack, so back had nothing to return to.
+  const initial = "menu";
   navigationStack.push({ id: initial, direction: "right" });
   try {
     history.replaceState({ screenId: initial }, "", `#${initial}`);
@@ -571,7 +543,9 @@ async function boot() {
   renderScreen(initial, { direction: "right", leaving: null });
 
   window.addEventListener("popstate", () => {
-    if (navigationStack.length > 1) goBack();
+    // On a secondary screen the back gesture returns to the menu; on the menu it
+    // is left to the host so the WebUI can be closed as usual.
+    if (navigationStack.at(-1)?.id !== "menu") goBack();
   });
 
   // Live data: module version and the system accent colour.
