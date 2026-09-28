@@ -10,9 +10,14 @@ rm -f "$MODDIR/data/pending_reboot"
 
 # Self-heal an install that skipped customize.sh: restore executable bits
 # and regenerate the font config backup so the WebUI never ends up
-# reporting connection failures over missing permissions.
-chmod 0755 "$MODDIR/tools/fontctl.sh" "$MODDIR/tools/fontconfig.sh" \
-  "$MODDIR/webroot/cgi-bin/exec" 2>/dev/null
+# reporting connection failures over missing permissions. The staged update
+# directory is healed as well: a metamodule can hot-apply an update and leave
+# modules_update behind with scripts that are not executable yet.
+for dir in "$MODDIR" /data/adb/modules_update/font-settings; do
+  [ -d "$dir" ] || continue
+  chmod 0755 "$dir/tools/fontctl.sh" "$dir/tools/fontconfig.sh" \
+    "$dir/webroot/cgi-bin/exec" 2>/dev/null
+done
 if [ ! -d "$MODDIR/config/original" ] || [ ! -s "$MODDIR/data/font-configs.list" ]; then
   sh "$MODDIR/tools/fontconfig.sh" prepare >/dev/null 2>&1
 fi

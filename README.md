@@ -1,7 +1,7 @@
 ﻿# Font Settings
 
 - 作者：**yuzlyn**
-- 版本：**v2.4.1**
+- 版本：**v2.4.2**
 - 模块 ID：`font-settings`
 
 这是一个适用于 Android 8.0+ 的通用 KernelSU 字体模块，不限定手机品牌或 ROM。模块提供离线 WebUI，中文与西文各自可上传多个 `.ttf` 字体并按顺序组成 font-family 回退链（缺字自动回退，支持拖拽排序），上传可变字体后可调节 `100`–`900` 字重，并可选择内置 iOS、Google、Blobmoji、Facebook Emoji 或上传自定义 `.ttf/.otf`。所有替换均通过 KernelSU systemless mount 生效，不直接修改系统分区。
@@ -11,6 +11,7 @@
 - 完整包：[font-settings_v2.4.1_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.1/font-settings_v2.4.1_KSU.zip)，`179,033,036` 字节，SHA-256：`01B5443875D81F3829B2A0C2B05A806B82FF85B699EED0A11F1C8514AA125D83`。
 - 精简包：[font-settings_v2.4.1_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.1/font-settings_v2.4.1_lite_KSU.zip)，`33,312,305` 字节，SHA-256：`DF7FA5751B371C968175776AE3DDB0928FDB668F78AE61A06E417CF5296351BF`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
 
+v2.4.2 修复"WebUI 显示连线失败但命令其实可用"的情况。模块更新安装后 `modules_update/font-settings` 会与活动目录同时存在（部分 metamodule 会热应用更新并保留该目录），而其中的脚本可能还没有可执行位，界面却优先使用它，于是每条命令都返回 `Permission denied`、界面报连线失败。现在页面只会选择 `tools/fontctl.sh` 真正可执行的目录（优先已应用的更新目录，否则回退活动目录），并在遇到权限类错误时自动 `chmod` 两个候选目录后重试一次；`service.sh` 开机自愈也同时修复两个目录的权限。
 v2.4.1 修复 v2.4.0 新界面"卡死 / 图标不显示 / 组件逻辑混乱"三个问题。**卡死**的根因是预览面板与路径导入会把整个字体文件经 root bridge 读进 WebView——一个 10 MB 的中文字体变成约 14 MB 的 JavaScript 字符串，WebView 直接卡住；现在预览面板只展示字族名称与元数据（大小、可变/静态、链序），路径导入改为 512 KiB 分块读取并显示进度，任何大对象都不再跨桥，`ui-smoke` 与 `live-check` 都加入了"零字体字节传输"的回归断言。**图标**改为把 Material Symbols Rounded 与 Roboto Flex 以 `data:` URI 内联进 `fonts.css`，不再受宿主对 `.woff2` 的 MIME 处理影响（KernelSU 与 KsuWebUI 对未知扩展名回退 `text/plain`）。**交互**简化：缺字回退改成列表行内开关（不再跳转独立页面）、菜单顶部新增连线/待重启/处理中状态标签与重新整理按钮、预览下拉只列出该角色真实存在的字族（系统预设 + 模块字体链），不再列出无法操作的设备字族。
 v2.4.0 按 Material 3 Expressive 重写整个 WebUI。前端改为独立源码目录 `webui/`，用 esbuild 打包成单个离线 `app.js`，组件全部来自 Google 官方 Material Web（列表、FAB、下拉、对话框、滑杆、开关、输入框、进度），字体改为本地 `Roboto Flex` 可变字体与按需裁剪的 `Material Symbols Rounded`；页面结构变为 `字型設定` / `中文字型` / `西文字型` 三屏加 `Emoji 設定`、`缺字回退` 两个设置页，中文字型从右滑入、西文字型从左滑入，返回时反向播放（含系统返回手势）；新增 380×220dp 预览面板与「已有字族」exposed dropdown（选项来自字体链真实字体文件与设备字族），列表改为 M3 Expressive 分段样式（72dp 行高、3dp 间隔、28/8dp 圆角），重启 FAB 叠放在「關於」列表组上；配色改为「可取用系统强调色、取不到时回退到文档指定的紫色方案」，浅色/深色跟随系统。上传、删除、拖拽排序、字重/字号滑杆、Emoji 选择等原有功能保持不变，浏览器本地状态改用 IndexedDB 持久化。
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Font Settings WebUI - Material 3 Expressive application shell.
  *
  * Screens: 字型設定 (menu), 中文字型, 西文字型, Emoji 設定.
@@ -17,6 +17,7 @@ import {
   EMOJI_PRESETS,
   getModuleDir,
   getStatus,
+  healModulePermissions,
   normalizeWeight,
   normalizeWesternSize,
   rebootDevice,
@@ -199,18 +200,27 @@ async function refresh({ silent = false } = {}) {
     state.statusStamp += 1;
     if (!silent) hideMessage();
   } catch (error) {
-    state.error = error;
-    if (hasKsuBridge) {
-      showMessage(describeError(error), {
-        actionLabel: t("retryConnection"),
-        onAction: () => refresh(),
-      });
-    } else {
-      showMessage(t("connectionHint"), {
-        actionLabel: t("retryConnection"),
-        onAction: () => refresh(),
-      });
+    // A stale modules_update directory (or an installer that skipped the
+    // permission step) makes every command fail; repair and retry once.
+    if (/Permission denied|can't execute|not found/i.test(String(error?.message || ""))) {
+      try {
+        await healModulePermissions();
+        const status = await getStatus();
+        state.status = status;
+        state.error = null;
+        state.statusStamp += 1;
+        refreshScreens();
+        bootProgress?.classList.add("hidden");
+        return;
+      } catch {
+        // fall through to the error state below
+      }
     }
+    state.error = error;
+    showMessage(hasKsuBridge ? describeError(error) : t("connectionHint"), {
+      actionLabel: t("retryConnection"),
+      onAction: () => refresh(),
+    });
   } finally {
     refreshScreens();
     bootProgress?.classList.add("hidden");
@@ -521,6 +531,9 @@ const ctx = {
     describe: describeError,
   },
 };
+
+// Exposed for the headless checks in webui/tests (read-only inspection).
+globalThis.FontSettingsDebug = { state, ctx, screens: () => [...document.querySelectorAll('section.screen')].map((s) => s.dataset.screen) };
 
 /* -------------------------------------------------------------------- boot */
 

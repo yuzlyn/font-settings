@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Device-side font API: status, chain editing, uploads and Emoji handling.
  * All mutations go through the module's `tools/fontctl.sh` as root.
  */
@@ -38,14 +38,44 @@ export function getModuleDir() {
   return moduleDir;
 }
 
-/** Resolves the writable module directory (update path wins before reboot). */
+/**
+ * Resolves the module directory commands are run from.
+ *
+ * A freshly installed update lives in modules_update until the next reboot, but
+ * its scripts may not be executable yet (some installers only apply the
+ * permissions at boot, and a metamodule can hot-apply an update while leaving
+ * modules_update behind). Only a directory whose fontctl.sh is executable is
+ * used, with the active module as the fallback.
+ */
 export async function resolveModuleDir() {
-  const result = (await exec(`[ -d '${UPDATE_MODDIR}' ] && echo '${UPDATE_MODDIR}' || echo '${ACTIVE_MODDIR}'`))
-    .split(/\r?\n/)
-    .at(-1);
-  moduleDir = result === UPDATE_MODDIR ? UPDATE_MODDIR : ACTIVE_MODDIR;
+  const probe = [
+    `if [ -x '${UPDATE_MODDIR}/tools/fontctl.sh' ]; then echo update;`,
+    `elif [ -x '${ACTIVE_MODDIR}/tools/fontctl.sh' ]; then echo active;`,
+    "else echo active; fi",
+  ].join(" ");
+  let answer = "active";
+  try {
+    answer = (await exec(probe)).split(/\r?\n/).at(-1);
+  } catch {
+    // Bridge not ready yet; keep the active module.
+  }
+  moduleDir = answer === "update" ? UPDATE_MODDIR : ACTIVE_MODDIR;
   fontctl = `${moduleDir}/tools/fontctl.sh`;
   return moduleDir;
+}
+
+/** Best-effort permission repair for every module directory candidate. */
+export async function healModulePermissions() {
+  for (const dir of [ACTIVE_MODDIR, UPDATE_MODDIR]) {
+    try {
+      await exec(
+        `chmod 0755 '${dir}/tools/fontctl.sh' '${dir}/tools/fontconfig.sh' '${dir}/webroot/cgi-bin/exec' 2>/dev/null; echo ok`,
+      );
+    } catch {
+      // The other candidate may not exist; ignore.
+    }
+  }
+  return resolveModuleDir();
 }
 
 function probeShellCapabilities() {
