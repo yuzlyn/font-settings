@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Font Settings WebUI - Material 3 Expressive application shell.
  *
  * Screens: 字型設定 (menu), 中文字型, 西文字型, Emoji 設定.

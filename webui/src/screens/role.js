@@ -1,4 +1,4 @@
-﻿/** The Chinese / Latin role screens: family chain, sliders and the add FAB. */
+/** The Chinese / Latin role screens: family chain, sliders and the add FAB. */
 
 import { t } from "../i18n.js";
 import { formatBytes, normalizeWeight, normalizeWesternSize } from "../module-api.js";

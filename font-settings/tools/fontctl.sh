@@ -10,10 +10,32 @@ EMOJI_TARGETS_FILE="$DATA_DIR/emoji.targets"
 EMOJI_CUSTOM_FILE="$DATA_DIR/emoji-custom.font"
 WESTERN_SIZE_FILE="$DATA_DIR/western.size"
 FALLBACK_FILE="$DATA_DIR/fallback"
+# Authoritative copy of everything the user uploaded. It lives outside the
+# module directory on purpose: a metamodule can replace that directory wholesale
+# when it applies an update, which used to wipe uploaded fonts. customize.sh and
+# post-fs-data.sh restore from here.
+BACKUP_DIR=/data/adb/font-settings
 
 fail() {
   echo "error=$1"
   exit 1
+}
+
+# Mirrors the user's fonts and metadata into the persistent backup directory.
+sync_backup() {
+  mkdir -p "$BACKUP_DIR/fonts" "$BACKUP_DIR/data" 2>/dev/null || return 0
+  for font in "$SYSTEM_FONT_DIR"/FontSetting*.ttf; do
+    [ -f "$font" ] && cp -af "$font" "$BACKUP_DIR/fonts/" 2>/dev/null
+  done
+  for target in "$DATA_DIR"/*.list "$DATA_DIR"/*.b64 "$DATA_DIR"/*.variable \
+    "$DATA_DIR"/western.size "$DATA_DIR"/chinese.weight "$DATA_DIR"/western.weight \
+    "$DATA_DIR"/fallback "$DATA_DIR"/emoji.mode "$DATA_DIR"/emoji.targets \
+    "$DATA_DIR"/emoji-custom.font; do
+    [ -f "$target" ] && cp -af "$target" "$BACKUP_DIR/data/" 2>/dev/null
+  done
+  chmod 0644 "$BACKUP_DIR"/data/* 2>/dev/null
+  chmod 0644 "$BACKUP_DIR"/fonts/* 2>/dev/null
+  return 0
 }
 
 role_paths() {
@@ -274,6 +296,7 @@ apply_emoji() {
       printf '%s\n' "$mode" > "$EMOJI_MODE_FILE" || fail "emoji_state_failed"
       chmod 0644 "$EMOJI_MODE_FILE"
       touch "$DATA_DIR/pending_reboot"
+      sync_backup
       sync
       echo "ok=emoji"
       return 0
@@ -300,6 +323,7 @@ apply_emoji() {
   printf '%s\n' "$mode" > "$EMOJI_MODE_FILE" || fail "emoji_state_failed"
   chmod 0644 "$EMOJI_TARGETS_FILE" "$EMOJI_MODE_FILE"
   touch "$DATA_DIR/pending_reboot"
+  sync_backup
   sync
   echo "ok=emoji"
 }
@@ -406,6 +430,7 @@ commit_upload() {
   chmod 0644 "$LIST_FILE"
   apply_config
   touch "$DATA_DIR/pending_reboot"
+  sync_backup
   sync
   echo "ok=commit"
 }
@@ -438,6 +463,7 @@ remove_font() {
   rm -f "$SYSTEM_FONT_DIR/$name"
   apply_config
   touch "$DATA_DIR/pending_reboot"
+  sync_backup
   sync
   echo "ok=remove"
 }
@@ -473,6 +499,7 @@ reorder_fonts() {
   chmod 0644 "$LIST_FILE"
   apply_config
   touch "$DATA_DIR/pending_reboot"
+  sync_backup
   sync
   echo "ok=reorder"
 }
@@ -518,6 +545,7 @@ replace_font() {
   chmod 0644 "$LIST_FILE"
   apply_config
   touch "$DATA_DIR/pending_reboot"
+  sync_backup
   sync
   echo "ok=replace"
 }
@@ -540,6 +568,7 @@ set_western_size() {
   chmod 0644 "$WESTERN_SIZE_FILE"
   apply_config
   touch "$DATA_DIR/pending_reboot"
+  sync_backup
   sync
   echo "ok=western-size"
 }
@@ -552,6 +581,7 @@ set_fallback() {
   chmod 0644 "$FALLBACK_FILE"
   apply_config
   touch "$DATA_DIR/pending_reboot"
+  sync_backup
   sync
   echo "ok=fallback"
 }
@@ -568,6 +598,7 @@ set_font_weight() {
   chmod 0644 "$DATA_DIR/$role.weight"
   apply_config
   touch "$DATA_DIR/pending_reboot"
+  sync_backup
   sync
   echo "ok=weight"
 }
@@ -584,6 +615,10 @@ case "$1" in
   weight-set) set_font_weight "$2" "$3" ;;
   fallback-set) set_fallback "$2" ;;
   emoji-set) apply_emoji "$2" ;;
+  backup)
+    sync_backup
+    echo "ok=backup"
+    ;;
   emoji-detect)
     target="$(detect_emoji_target)"
     [ -n "$target" ] || fail "emoji_target_not_found"

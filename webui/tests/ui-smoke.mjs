@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Headless smoke test for the built WebUI.
  *
  * Serves font-settings/webroot over HTTP (module scripts cannot load from

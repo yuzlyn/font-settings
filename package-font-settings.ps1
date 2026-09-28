@@ -7,7 +7,18 @@ param(
 $ErrorActionPreference = "Stop"
 $workspace = Split-Path -Parent $PSCommandPath
 $moduleDir = Join-Path $workspace "font-settings"
-$version = ((Get-Content -LiteralPath (Join-Path $moduleDir "module.prop") | Where-Object { $_ -like "version=v*" }) -replace "^version=", "")
+$propPath = Join-Path $moduleDir "module.prop"
+
+# A UTF-8 BOM in module.prop makes the installer read the module id as
+# "<BOM>font-settings": KernelSU then ends up with two module directories whose
+# list keys collide (the manager crashes) and customize.sh writes into the BOM
+# directory, so uploaded fonts are silently lost. Refuse to ship that.
+$propBytes = [System.IO.File]::ReadAllBytes($propPath)
+if ($propBytes.Length -ge 3 -and $propBytes[0] -eq 0xEF -and $propBytes[1] -eq 0xBB -and $propBytes[2] -eq 0xBF) {
+  throw "module.prop starts with a UTF-8 BOM; rewrite it as UTF-8 without BOM before packaging."
+}
+
+$version = ((Get-Content -LiteralPath $propPath | Where-Object { $_ -like "version=v*" }) -replace "^version=", "")
 $suffix = if ($Edition -eq "lite") { "_lite" } else { "" }
 $archive = Join-Path $workspace ("font-settings_{0}{1}_KSU.zip" -f $version, $suffix)
 $staging = Join-Path $env:TEMP ("font-settings-{0}-{1}" -f $version, $Edition)

@@ -1,4 +1,4 @@
-﻿/** Localised strings. zh-TW matches the product wording, zh-CN and en-US follow. */
+/** Localised strings. zh-TW matches the product wording, zh-CN and en-US follow. */
 
 export const TRANSLATIONS = {
   "zh-TW": {

@@ -1,4 +1,4 @@
-﻿/** Emoji mapping screen. */
+/** Emoji mapping screen. */
 
 import { t } from "../i18n.js";
 import { EMOJI_PRESETS, formatBytes } from "../module-api.js";

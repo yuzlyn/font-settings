@@ -13,11 +13,33 @@ MODID=font-settings
 LEGACY_MODID=font_setting_coloros16
 OLDMOD="/data/adb/modules/$MODID"
 [ -d "$OLDMOD" ] || OLDMOD="/data/adb/modules/$LEGACY_MODID"
+# Persistent copy of the user's uploads, kept outside the module directory so a
+# metamodule replacing that directory cannot destroy it.
+BACKUP_DIR="/data/adb/$MODID"
 
-# 更新模块时保留用户已经上传的字体和元数据。不要求内置默认字体仍在链
-# 中：用户删除默认字体后可能只保留 -N 槽位文件，同样需要完整保留，否则
-# 升级会静默丢失全部上传字体。
-if [ -d "$OLDMOD/system/fonts" ]; then
+restore_from_backup() {
+  [ -d "$BACKUP_DIR" ] || return 1
+  restored=0
+  mkdir -p "$MODPATH/system/fonts" "$MODPATH/data"
+  for font in "$BACKUP_DIR"/fonts/FontSettingChinese*.ttf "$BACKUP_DIR"/fonts/FontSettingWestern*.ttf; do
+    [ -f "$font" ] || continue
+    cp -af "$font" "$MODPATH/system/fonts/"
+    restored=1
+  done
+  [ "$restored" = 1 ] || return 1
+  for file in "$BACKUP_DIR"/data/*; do
+    [ -f "$file" ] && cp -af "$file" "$MODPATH/data/"
+  done
+  chmod 0644 "$MODPATH"/data/* 2>/dev/null
+  return 0
+}
+
+# 更新模块时保留用户已经上传的字体和元数据。优先使用模块目录之外的持久备份
+# （metamodule 应用更新时会整目录替换，模块内的副本会随之丢失），备份缺失时
+# 再回退到旧模块目录。
+if restore_from_backup; then
+  ui_print "- 从持久备份恢复已上传的字体"
+elif [ -d "$OLDMOD/system/fonts" ]; then
   mkdir -p "$MODPATH/system/fonts" "$MODPATH/data"
   preserved=0
   for font in "$OLDMOD"/system/fonts/FontSettingChinese*.ttf "$OLDMOD"/system/fonts/FontSettingWestern*.ttf; do

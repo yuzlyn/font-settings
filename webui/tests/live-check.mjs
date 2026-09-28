@@ -1,4 +1,4 @@
-﻿/**
+/**
  * End-to-end check against the device's live WebUI server: the page runs the
  * real root bridge (no ksu mock), so the status and font chain data come from
  * the phone, and it asserts that no font bytes cross the bridge (the freeze

@@ -1,16 +1,17 @@
-﻿# Font Settings
+# Font Settings
 
 - 作者：**yuzlyn**
-- 版本：**v2.4.2**
+- 版本：**v2.4.3**
 - 模块 ID：`font-settings`
 
 这是一个适用于 Android 8.0+ 的通用 KernelSU 字体模块，不限定手机品牌或 ROM。模块提供离线 WebUI，中文与西文各自可上传多个 `.ttf` 字体并按顺序组成 font-family 回退链（缺字自动回退，支持拖拽排序），上传可变字体后可调节 `100`–`900` 字重，并可选择内置 iOS、Google、Blobmoji、Facebook Emoji 或上传自定义 `.ttf/.otf`。所有替换均通过 KernelSU systemless mount 生效，不直接修改系统分区。
 
 ## 下载
 
-- 完整包：[font-settings_v2.4.2_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.2/font-settings_v2.4.2_KSU.zip)，`179,033,375` 字节，SHA-256：`1221E4BE6116CEE7A3F69273B6B2A0215862DC1AF68E8E4564C503CF11213B16`。
-- 精简包：[font-settings_v2.4.2_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.2/font-settings_v2.4.2_lite_KSU.zip)，`33,312,644` 字节，SHA-256：`833BD6948592E3A4DA08949484E403F43ACDFA74D56A778F43FB1D0ABF66D1BC`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+- 完整包：[font-settings_v2.4.3_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.3/font-settings_v2.4.3_KSU.zip)，`179,034,820` 字节，SHA-256：`796539EB74B17F6E5141B8E655850FAB570F247461E31F8901D672B5EDBC84A6`。
+- 精简包：[font-settings_v2.4.3_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.3/font-settings_v2.4.3_lite_KSU.zip)，`33,314,093` 字节，SHA-256：`7A362CD1DF22A03921587A565958446A9433F7A88032BCF512C1EC7AB9444C04`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
 
+v2.4.3 修复 KernelSU 管理器闪退与升级丢失用户字体的共同根因。构建脚本在改写 `module.prop` 时写入了 UTF-8 BOM，安装器于是把模块 ID 读成 `<BOM>font-settings`：KernelSU 会看到两个模块目录、模块列表的 key 冲突导致管理器闪退（`IllegalArgumentException: Key "font-settings" was already used`），同时 `customize.sh` 的保留逻辑把用户字体写进了 BOM 目录，metamodule 再用干净包覆盖活动目录，字体就丢了。现在：`module.prop` 为无 BOM 的 UTF-8；`package-font-settings.ps1` 打包前校验 BOM 并拒绝打包；用户上传的字体与元数据同步到模块目录之外的持久备份 `/data/adb/font-settings/`（安装时由 `customize.sh` 恢复、开机由 `post-fs-data.sh` 补回），模块目录被整体替换也不会丢；内置 WebUI 服务改从稳定副本 `/data/adb/font-settings/webui` 提供（模块目录被替换后，运行中的 httpd 原本会因为工作目录失效而对所有请求返回 404）；`service.sh` 开机还会清理与活动版本相同的 `modules_update` 残留副本——它是管理器闪退的直接触发器。
 v2.4.2 修复"WebUI 显示连线失败但命令其实可用"的情况。模块更新安装后 `modules_update/font-settings` 会与活动目录同时存在（部分 metamodule 会热应用更新并保留该目录），而其中的脚本可能还没有可执行位，界面却优先使用它，于是每条命令都返回 `Permission denied`、界面报连线失败。现在页面只会选择 `tools/fontctl.sh` 真正可执行的目录（优先已应用的更新目录，否则回退活动目录），并在遇到权限类错误时自动 `chmod` 两个候选目录后重试一次；`service.sh` 开机自愈也同时修复两个目录的权限。
 v2.4.1 修复 v2.4.0 新界面"卡死 / 图标不显示 / 组件逻辑混乱"三个问题。**卡死**的根因是预览面板与路径导入会把整个字体文件经 root bridge 读进 WebView——一个 10 MB 的中文字体变成约 14 MB 的 JavaScript 字符串，WebView 直接卡住；现在预览面板只展示字族名称与元数据（大小、可变/静态、链序），路径导入改为 512 KiB 分块读取并显示进度，任何大对象都不再跨桥，`ui-smoke` 与 `live-check` 都加入了"零字体字节传输"的回归断言。**图标**改为把 Material Symbols Rounded 与 Roboto Flex 以 `data:` URI 内联进 `fonts.css`，不再受宿主对 `.woff2` 的 MIME 处理影响（KernelSU 与 KsuWebUI 对未知扩展名回退 `text/plain`）。**交互**简化：缺字回退改成列表行内开关（不再跳转独立页面）、菜单顶部新增连线/待重启/处理中状态标签与重新整理按钮、预览下拉只列出该角色真实存在的字族（系统预设 + 模块字体链），不再列出无法操作的设备字族。
 v2.4.0 按 Material 3 Expressive 重写整个 WebUI。前端改为独立源码目录 `webui/`，用 esbuild 打包成单个离线 `app.js`，组件全部来自 Google 官方 Material Web（列表、FAB、下拉、对话框、滑杆、开关、输入框、进度），字体改为本地 `Roboto Flex` 可变字体与按需裁剪的 `Material Symbols Rounded`；页面结构变为 `字型設定` / `中文字型` / `西文字型` 三屏加 `Emoji 設定`、`缺字回退` 两个设置页，中文字型从右滑入、西文字型从左滑入，返回时反向播放（含系统返回手势）；新增 380×220dp 预览面板与「已有字族」exposed dropdown（选项来自字体链真实字体文件与设备字族），列表改为 M3 Expressive 分段样式（72dp 行高、3dp 间隔、28/8dp 圆角），重启 FAB 叠放在「關於」列表组上；配色改为「可取用系统强调色、取不到时回退到文档指定的紫色方案」，浅色/深色跟随系统。上传、删除、拖拽排序、字重/字号滑杆、Emoji 选择等原有功能保持不变，浏览器本地状态改用 IndexedDB 持久化。
@@ -154,7 +155,7 @@ WebUI 已按 Material 3 Expressive 重写，使用 Google 官方的 Material Web
 - 可变字体字重以 `data/<role>.weight` 保存，范围 `100` 到 `900`，默认 `400`。生成器为可变字体的每个槽位把 `wght` 轴值改写为“原槽位字重 + 设定字重 − 400”并钳制到 `100`–`900`，静态字体节点不受影响。
 - 浏览器以 80 KiB 分块通过 KernelSU root bridge 写入临时文件；两端都支持时使用 gzip 压缩传输（`base64 -d | gzip -dc` 解压追加），否则回退原始 base64 分块。分块大小保证编码后的指令长度低于 `execve` 的 128 KiB 参数上限。
 - 路径导入时，页面先经 root bridge 以 `stat` 校验文件并以 `base64` 读回字节，再复用与系统选择器相同的校验、cmap 隔离与分块上传管线。
-- `service.sh` 开机后启动内置 WebUI 服务：busybox httpd 只绑定 `127.0.0.1:7125`，根目录为模块 `webroot`；busybox 依次探测 Magisk（`/data/adb/magisk/busybox`）、KernelSU（`/data/adb/ksu/bin/busybox`）与 APatch（`/data/adb/ap/bin/busybox`）位置。启动时还会自愈：恢复 `fontctl.sh`、`fontconfig.sh` 与 `cgi-bin/exec` 的可执行位，并在字体配置备份缺失时重新捕获系统字体 XML。
+- `service.sh` 开机后启动内置 WebUI 服务：busybox httpd 只绑定 `127.0.0.1:7125`，根目录为模块目录之外的稳定副本 `/data/adb/font-settings/webui`（模块更新替换 webroot 时不会让运行中的守护进程失效）；busybox 依次探测 Magisk（`/data/adb/magisk/busybox`）、KernelSU（`/data/adb/ksu/bin/busybox`）与 APatch（`/data/adb/ap/bin/busybox`）位置。启动时还会自愈：恢复 `fontctl.sh`、`fontconfig.sh` 与 `cgi-bin/exec` 的可执行位、在字体配置备份缺失时重新捕获系统字体 XML、清理已应用版本残留的 `modules_update` 副本（否则 KernelSU 管理器会因模块重复而闪退）。
 - 页面通过 `window.ksu` 探测桥接能力：缺少 KernelSU bridge（如用浏览器访问内置服务）时，自动改用 `POST http://127.0.0.1:7125/cgi-bin/exec`，由 busybox httpd 的 CGI 以 root 执行命令并返回“退出码 + 输出”。
 - 点击“添加字体”先尝试系统文件选择器；宿主约 1 秒内没有任何页面可见性/取消/变更信号（未实现 `onShowFileChooser`）时才回退到路径导入对话框。
 - 上传前由浏览器重建字体的 Unicode `cmap` 并重算 SFNT 校验和；其他字体表和字形数据保持不变。
@@ -174,9 +175,13 @@ adb shell su -c 'touch /data/adb/modules/font-settings/disable'
 adb reboot
 ```
 
-如果 WebUI 显示“KernelSU 连接失败”，请确认页面是从 KernelSU 模块列表打开，而不是使用普通浏览器直接打开 `index.html`。
+如果 WebUI 顶部显示「連線失敗」：先点右上角的重新整理；仍失败时确认模块目录内的 `tools/fontctl.sh` 可执行（v2.4.3 起页面会自动修复权限并重试一次），或改用手机浏览器打开 `http://127.0.0.1:7125`（模块内置服务，不依赖任何宿主应用）。
 
 如果页面提示字体模块冲突，请停用提示中的模块后重启。`Font Loader` 仅提供字体预加载能力，不挂载字体 XML，因此不被视为冲突模块。
+
+如果 KernelSU 管理器打开就闪退，并在崩溃日志里看到 `IllegalArgumentException: Key "font-settings" was already used`，说明模块同时存在于 `modules/` 与 `modules_update/`，管理器把模块列了两次。重启一次（或删除 `/data/adb/modules_update/font-settings`）即可恢复；v2.4.3 起 `service.sh` 会在开机时自动清理这种已应用版本的残留副本。
+
+如果升级后发现上传的字体没了：v2.4.3 起上传的字体与元数据会同步到 `/data/adb/font-settings/`，升级时会自动恢复；该目录也可作为卸载前的备份来源。
 
 ## 项目结构
 
