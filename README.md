@@ -1,4 +1,4 @@
-# Font Settings
+﻿# Font Settings
 
 - 作者：**yuzlyn**
 - 版本：**v2.4.0**
@@ -252,7 +252,7 @@ node tests/upload-transfer-test.cjs
 node webui/tests/ui-smoke.mjs     # 无头界面冒烟测试（35 项断言）
 ```
 
-需要复核视觉时用 `node webui/tests/screenshots.mjs`（输出到 `webui/.screenshots/`，浅色与深色各屏幕）。真机验证模块自带 WebUI 服务时，用设备上的 busybox httpd 托管构建产物再跑 `node webui/tests/device-check.mjs`（需先 `adb forward tcp:7131 tcp:7131`），它会检查设备实际返回的 MIME、离线字体加载、图标连字与首屏结构。字体配置转换器夹具测试需要在 Android shell 中运行：
+需要复核视觉时用 `node webui/tests/screenshots.mjs`（输出到 `webui/.screenshots/`，浅色与深色各屏幕）。真机验证模块自带 WebUI 服务时，用设备上的 busybox httpd 托管构建产物再跑 `node webui/tests/device-check.mjs`（需先 `adb forward tcp:7131 tcp:7131`），它会检查设备实际返回的 MIME、离线字体加载、图标连字与首屏结构；`node webui/tests/live-check.mjs` 则在 `adb forward tcp:7125 tcp:7125` 后直接对真机运行中的 WebUI 服务做端到端校验（真实 root 桥、真实字体链数据）。字体配置转换器夹具测试需要在 Android shell 中运行：
 
 ```sh
 sh tests/fontconfig-test.sh
