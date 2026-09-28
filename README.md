@@ -8,8 +8,8 @@
 
 ## 下载
 
-- 完整包：[font-settings_v2.4.1_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.1/font-settings_v2.4.1_KSU.zip)，`179,033,036` 字节，SHA-256：`01B5443875D81F3829B2A0C2B05A806B82FF85B699EED0A11F1C8514AA125D83`。
-- 精简包：[font-settings_v2.4.1_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.1/font-settings_v2.4.1_lite_KSU.zip)，`33,312,305` 字节，SHA-256：`DF7FA5751B371C968175776AE3DDB0928FDB668F78AE61A06E417CF5296351BF`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+- 完整包：[font-settings_v2.4.2_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.2/font-settings_v2.4.2_KSU.zip)，`179,033,375` 字节，SHA-256：`1221E4BE6116CEE7A3F69273B6B2A0215862DC1AF68E8E4564C503CF11213B16`。
+- 精简包：[font-settings_v2.4.2_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.2/font-settings_v2.4.2_lite_KSU.zip)，`33,312,644` 字节，SHA-256：`833BD6948592E3A4DA08949484E403F43ACDFA74D56A778F43FB1D0ABF66D1BC`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
 
 v2.4.2 修复"WebUI 显示连线失败但命令其实可用"的情况。模块更新安装后 `modules_update/font-settings` 会与活动目录同时存在（部分 metamodule 会热应用更新并保留该目录），而其中的脚本可能还没有可执行位，界面却优先使用它，于是每条命令都返回 `Permission denied`、界面报连线失败。现在页面只会选择 `tools/fontctl.sh` 真正可执行的目录（优先已应用的更新目录，否则回退活动目录），并在遇到权限类错误时自动 `chmod` 两个候选目录后重试一次；`service.sh` 开机自愈也同时修复两个目录的权限。
 v2.4.1 修复 v2.4.0 新界面"卡死 / 图标不显示 / 组件逻辑混乱"三个问题。**卡死**的根因是预览面板与路径导入会把整个字体文件经 root bridge 读进 WebView——一个 10 MB 的中文字体变成约 14 MB 的 JavaScript 字符串，WebView 直接卡住；现在预览面板只展示字族名称与元数据（大小、可变/静态、链序），路径导入改为 512 KiB 分块读取并显示进度，任何大对象都不再跨桥，`ui-smoke` 与 `live-check` 都加入了"零字体字节传输"的回归断言。**图标**改为把 Material Symbols Rounded 与 Roboto Flex 以 `data:` URI 内联进 `fonts.css`，不再受宿主对 `.woff2` 的 MIME 处理影响（KernelSU 与 KsuWebUI 对未知扩展名回退 `text/plain`）。**交互**简化：缺字回退改成列表行内开关（不再跳转独立页面）、菜单顶部新增连线/待重启/处理中状态标签与重新整理按钮、预览下拉只列出该角色真实存在的字族（系统预设 + 模块字体链），不再列出无法操作的设备字族。
