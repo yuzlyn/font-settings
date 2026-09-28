@@ -28,7 +28,10 @@ function copy(source, target) {
 function build() {
   fs.mkdirSync(outDir, { recursive: true });
 
-  // 1. Bundle the application (Material Web included) into one module.
+  // 1. Bundle the application (Material Web included) into one classic script.
+  //    An IIFE is used on purpose: ES modules are rejected outright when a host
+  //    serves the file with the wrong MIME type, while a classic script still
+  //    runs (and KernelSU / KsuWebUI map .js to text/plain for unknown paths).
   //    Dependencies live in the dedicated build prefix, so expose it through
   //    NODE_PATH for esbuild's resolver.
   execFileSync(
@@ -37,7 +40,7 @@ function build() {
       esbuildBin,
       path.join(srcDir, "app.js"),
       "--bundle",
-      "--format=esm",
+      "--format=iife",
       "--target=chrome100",
       "--minify",
       "--legal-comments=none",

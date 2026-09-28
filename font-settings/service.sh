@@ -8,6 +8,15 @@ while [ "$(getprop sys.boot_completed)" != "1" ] && [ "$count" -lt 180 ]; do
 done
 rm -f "$MODDIR/data/pending_reboot"
 
+# KernelSU marks a module with an `update` file while an update is staged. If
+# modules_update no longer holds this module the marker is stale (a metamodule
+# already applied it) and it keeps the manager showing a pending update, which
+# also blocks the WebUI entry; drop it and reset the WebUI diagnostic log.
+if [ -f "$MODDIR/update" ] && [ ! -d "/data/adb/modules_update/${MODDIR##*/}" ]; then
+  rm -f "$MODDIR/update"
+fi
+: > /data/adb/font-settings/webui-error.log 2>/dev/null || true
+
 # A metamodule (e.g. Magic Mount-rs) can hot-apply an update and leave
 # modules_update/<id> behind. KernelSU then lists this module twice, and its
 # manager crashes with `IllegalArgumentException: Key "<id>" was already used`.

@@ -98,7 +98,20 @@ function bridgeInitScript({ fontBase64, status, families }) {
       if (command.includes("weight-set")) output = "ok=weight";
       if (command.includes("western-size")) output = "ok=western-size";
       if (command.includes("emoji-set")) output = "ok=emoji";
-      setTimeout(() => window[callbackName](0, output, ""), 0);
+      // Mirror KernelSU's three call signatures.
+      if (typeof options === "string" && callbackName === undefined) {
+        setTimeout(() => {
+          const callback = window[options];
+          if (typeof callback === "function") callback(0, output, "");
+        }, 0);
+        return undefined;
+      }
+      if (callbackName === undefined) return output;
+      setTimeout(() => {
+        const callback = window[callbackName];
+        if (typeof callback === "function") callback(0, output, "");
+      }, 0);
+      return undefined;
     },
   };
 }

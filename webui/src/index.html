@@ -10,10 +10,73 @@
     <link rel="stylesheet" href="styles.css?v=__VERSION__">
     <script src="vendor/material-kolor.js?v=__VERSION__"></script>
     <script src="font-isolation.js?v=__VERSION__" defer></script>
-    <script type="module" src="app.js?v=__VERSION__"></script>
+    <script>
+      // Bootstrap diagnostics: a WebView that cannot start the bundle used to
+      // show a plain blank page. Report the reason both on screen and into a log
+      // file on the device so it can be inspected with adb.
+      (function () {
+        window.__fontSettingsBootErrors = [];
+        var LOG = "/data/adb/font-settings/webui-error.log";
+        function shellEscape(value) {
+          return String(value).replace(/[\r\n]+/g, " ").replace(/'/g, "");
+        }
+        function write(line) {
+          try {
+            if (!window.ksu || typeof window.ksu.exec !== "function") return;
+            var command = "echo '" + shellEscape(line) + "' >> " + LOG;
+            // KernelSU exposes exec(cmd), exec(cmd, callback) and
+            // exec(cmd, options, callback); use the forms that exist.
+            try {
+              var name = "__fs_boot_" + Date.now() + "_" + Math.floor(Math.random() * 1e6);
+              window[name] = function () { delete window[name]; };
+              window.ksu.exec(command, name);
+            } catch (error) {
+              window.ksu.exec(command);
+            }
+          } catch (error) {}
+        }
+        function report(message, kind) {
+          var text = (kind ? kind + ": " : "") + message;
+          window.__fontSettingsBootErrors.push(text);
+          write(text);
+          try {
+            var box = document.getElementById("boot-error");
+            var line = document.getElementById("boot-error-text");
+            if (box && line) {
+              box.hidden = false;
+              line.textContent = window.__fontSettingsBootErrors.slice(-4).join("\n");
+            }
+          } catch (error) {}
+        }
+        write("boot: page loaded, origin=" + location.origin + " ua=" + navigator.userAgent.slice(0, 60));
+        window.addEventListener("error", function (event) {
+          if (event.target && event.target.tagName && !event.message) {
+            report(String(event.target.src || event.target.href || event.target.tagName), "resource failed");
+            return;
+          }
+          report((event.message || "unknown error") + " @" + (event.filename || "?") + ":" + (event.lineno || 0), "error");
+        }, true);
+        window.addEventListener("unhandledrejection", function (event) {
+          var reason = event.reason;
+          report(reason && reason.message ? reason.message : String(reason), "rejection");
+        });
+        window.setTimeout(function () {
+          if (window.FontSettingsDebug) {
+            write("boot: bundle running");
+          } else {
+            report("bundle did not start (app.js not executed)", "fatal");
+          }
+        }, 8000);
+      })();
+    </script>
+    <script defer src="app.js?v=__VERSION__"></script>
   </head>
   <body>
     <div class="app-surface">
+      <div id="boot-error" class="boot-error" hidden>
+        <strong class="typescale-title-medium-emphasized">WebUI 無法啟動</strong>
+        <pre id="boot-error-text" class="typescale-body-medium"></pre>
+      </div>
       <md-linear-progress data-boot-progress indeterminate aria-label="Loading"></md-linear-progress>
       <div class="screen-stack" data-screen-stack></div>
     </div>

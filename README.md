@@ -1,15 +1,17 @@
 # Font Settings
 
 - 作者：**yuzlyn**
-- 版本：**v2.4.3**
+- 版本：**v2.4.4**
 - 模块 ID：`font-settings`
 
 这是一个适用于 Android 8.0+ 的通用 KernelSU 字体模块，不限定手机品牌或 ROM。模块提供离线 WebUI，中文与西文各自可上传多个 `.ttf` 字体并按顺序组成 font-family 回退链（缺字自动回退，支持拖拽排序），上传可变字体后可调节 `100`–`900` 字重，并可选择内置 iOS、Google、Blobmoji、Facebook Emoji 或上传自定义 `.ttf/.otf`。所有替换均通过 KernelSU systemless mount 生效，不直接修改系统分区。
 
 ## 下载
 
-- 完整包：[font-settings_v2.4.3_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.3/font-settings_v2.4.3_KSU.zip)，`179,034,820` 字节，SHA-256：`796539EB74B17F6E5141B8E655850FAB570F247461E31F8901D672B5EDBC84A6`。
-- 精简包：[font-settings_v2.4.3_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.3/font-settings_v2.4.3_lite_KSU.zip)，`33,314,093` 字节，SHA-256：`7A362CD1DF22A03921587A565958446A9433F7A88032BCF512C1EC7AB9444C04`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+- 完整包：[font-settings_v2.4.4_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.4/font-settings_v2.4.4_KSU.zip)，`179,036,143` 字节，SHA-256：`53D36A2D23E37E80C18B483D3B898C92E55677CA91A43DD29827757BC5C56FAC`。
+- 精简包：[font-settings_v2.4.4_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.4/font-settings_v2.4.4_lite_KSU.zip)，`33,315,416` 字节，SHA-256：`0DA1DC9B63C53051EFAC92A0E4AF6A9CB96F0EFEA21128F0FB1FB3A950F61462`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+
+v2.4.4 修复 KernelSU 管理器里打开 WebUI 白屏。根因是界面脚本以 ES module（`<script type="module">`）加载：KernelSU 的静态资源处理器用**带查询串的文件名**猜 MIME（`app.js?v=243` 匹配不到已知扩展名），回退成 `text/plain`，而 ES module 在 MIME 不符时会被浏览器直接拒绝 → 白屏；同一份文件作为经典脚本则照常执行（旧版 MDUI 界面正是经典脚本，所以此前没暴露）。现在打包改为 IIFE 经典脚本（`--format=iife` + `<script defer>`），不再依赖宿主的 MIME 判定。同时新增 WebUI 自检：页面启动、bundle 执行、资源加载失败与未捕获异常都会写入 `/data/adb/font-settings/webui-error.log` 并在页面上显示可读错误；`service.sh` 开机还会清掉残留的 `update` 标记（它会让管理器一直显示"待更新"）并重置自检日志。
 
 v2.4.3 修复 KernelSU 管理器闪退与升级丢失用户字体的共同根因。构建脚本在改写 `module.prop` 时写入了 UTF-8 BOM，安装器于是把模块 ID 读成 `<BOM>font-settings`：KernelSU 会看到两个模块目录、模块列表的 key 冲突导致管理器闪退（`IllegalArgumentException: Key "font-settings" was already used`），同时 `customize.sh` 的保留逻辑把用户字体写进了 BOM 目录，metamodule 再用干净包覆盖活动目录，字体就丢了。现在：`module.prop` 为无 BOM 的 UTF-8；`package-font-settings.ps1` 打包前校验 BOM 并拒绝打包；用户上传的字体与元数据同步到模块目录之外的持久备份 `/data/adb/font-settings/`（安装时由 `customize.sh` 恢复、开机由 `post-fs-data.sh` 补回），模块目录被整体替换也不会丢；内置 WebUI 服务改从稳定副本 `/data/adb/font-settings/webui` 提供（模块目录被替换后，运行中的 httpd 原本会因为工作目录失效而对所有请求返回 404）；`service.sh` 开机还会清理与活动版本相同的 `modules_update` 残留副本——它是管理器闪退的直接触发器。
 v2.4.2 修复"WebUI 显示连线失败但命令其实可用"的情况。模块更新安装后 `modules_update/font-settings` 会与活动目录同时存在（部分 metamodule 会热应用更新并保留该目录），而其中的脚本可能还没有可执行位，界面却优先使用它，于是每条命令都返回 `Permission denied`、界面报连线失败。现在页面只会选择 `tools/fontctl.sh` 真正可执行的目录（优先已应用的更新目录，否则回退活动目录），并在遇到权限类错误时自动 `chmod` 两个候选目录后重试一次；`service.sh` 开机自愈也同时修复两个目录的权限。
