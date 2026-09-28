@@ -60,37 +60,55 @@ function build() {
   fs.writeFileSync(path.join(outDir, "index.html"), html);
 
   // 3. Offline fonts: Roboto Flex subsets + Material Symbols Rounded subset.
+  //    Everything is inlined as data: URIs so the icons and text render in any
+  //    host (KernelSU manager, KsuWebUI, MMRL, plain browser) regardless of how
+  //    it maps MIME types for .woff2 - unknown extensions there fall back to
+  //    text/plain, which kills font loading in some WebViews.
   const fontDir = path.join(srcDir, "assets", "fonts");
-  fs.mkdirSync(path.join(outDir, "assets", "fonts"), { recursive: true });
-  const sheets = [];
-  for (const sheet of ["roboto-flex-local.css", "material-symbols-rounded.css"]) {
-    const file = path.join(fontDir, sheet);
-    if (fs.existsSync(file)) sheets.push(fs.readFileSync(file, "utf8").trim());
-  }
-  for (const entry of fs.readdirSync(fontDir)) {
-    if (entry.endsWith(".woff2")) copy(path.join(fontDir, entry), path.join(outDir, "assets", "fonts", entry));
-  }
-  const iconCss = fs.existsSync(path.join(fontDir, "material-symbols-rounded.css"))
-    ? fs
-        .readFileSync(path.join(fontDir, "material-symbols-rounded.css"), "utf8")
-        .replace(/url\(https:[^)]+\)/, 'url("material-symbols-rounded.woff2")')
-    : "";
+  const fontOutDir = path.join(outDir, "assets", "fonts");
+  fs.rmSync(fontOutDir, { recursive: true, force: true });
+  fs.mkdirSync(fontOutDir, { recursive: true });
+
+  const inline = (css, fileNames) => {
+    let output = css;
+    for (const name of fileNames) {
+      const file = path.join(fontDir, name);
+      if (!fs.existsSync(file)) continue;
+      const base64 = fs.readFileSync(file).toString("base64");
+      output = output.replaceAll(`url("${name}")`, `url("data:font/woff2;base64,${base64}")`);
+      output = output.replaceAll(`url(${name})`, `url("data:font/woff2;base64,${base64}")`);
+    }
+    return output;
+  };
+
   const robotoCss = fs.existsSync(path.join(fontDir, "roboto-flex-local.css"))
-    ? fs.readFileSync(path.join(fontDir, "roboto-flex-local.css"), "utf8")
+    ? inline(fs.readFileSync(path.join(fontDir, "roboto-flex-local.css"), "utf8"), [
+        "roboto-flex-latin.woff2",
+        "roboto-flex-latin-ext.woff2",
+      ])
     : "";
-  fs.writeFileSync(
-    path.join(outDir, "assets", "fonts", "fonts.css"),
-    `${robotoCss}\n${iconCss}\n`,
-  );
+  const iconCss = fs.existsSync(path.join(fontDir, "material-symbols-rounded.css"))
+    ? inline(
+        fs.readFileSync(path.join(fontDir, "material-symbols-rounded.css"), "utf8").replace(
+          /url\(https:[^)]+\)/,
+          'url("material-symbols-rounded.woff2")',
+        ),
+        ["material-symbols-rounded.woff2"],
+      )
+    : "";
+  const fontsCss = `${robotoCss.trim()}\n${iconCss.trim()}\n`;
+  fs.writeFileSync(path.join(fontOutDir, "fonts.css"), fontsCss);
+  // Keep a copy of the raw files for reference/debugging (not referenced by CSS).
+  for (const entry of fs.readdirSync(fontDir)) {
+    if (entry.endsWith(".woff2")) copy(path.join(fontDir, entry), path.join(fontOutDir, entry));
+  }
 
   const stats = {
     version,
     app: fs.statSync(path.join(outDir, "app.js")).size,
     styles: fs.statSync(path.join(outDir, "styles.css")).size,
     html: fs.statSync(path.join(outDir, "index.html")).size,
-    fonts: fs
-      .readdirSync(path.join(outDir, "assets", "fonts"))
-      .map((name) => `${name} ${fs.statSync(path.join(outDir, "assets", "fonts", name)).size}`),
+    fontsCss: fs.statSync(path.join(fontOutDir, "fonts.css")).size,
   };
   return stats;
 }
@@ -101,4 +119,4 @@ console.log(`  version   ${stats.version}`);
 console.log(`  app.js    ${(stats.app / 1024).toFixed(1)} KiB`);
 console.log(`  styles    ${(stats.styles / 1024).toFixed(1)} KiB`);
 console.log(`  index     ${stats.html} bytes`);
-for (const font of stats.fonts) console.log(`  font      ${font}`);
+console.log(`  fonts.css ${(stats.fontsCss / 1024).toFixed(1)} KiB (fonts inlined as data URIs)`);

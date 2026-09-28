@@ -1,16 +1,14 @@
-/**
+﻿/**
  * Device-side font API: status, chain editing, uploads and Emoji handling.
  * All mutations go through the module's `tools/fontctl.sh` as root.
  */
 
 import {
   assertCommand,
-  base64ToBytes,
   base64ToUtf8,
   bytesToBase64,
   exec,
   parseProperties,
-  shellQuote,
   utf8ToBase64,
 } from "./bridge.js";
 
@@ -291,54 +289,6 @@ export async function setEmojiMode(mode) {
 
 export async function rebootDevice() {
   await exec("svc power reboot");
-}
-
-/**
- * Loads a font from the device into the browser so the preview shows the real
- * file rather than a CSS family guess. Returns the generated family name.
- */
-export async function loadPreviewFont(fontName, { emoji = false } = {}) {
-  const relative = emoji ? `emoji-custom.font` : `system/fonts/${fontName}`;
-  const encoded = await exec(`base64 '${moduleDir}/${relative}'`, { timeout: 120000 });
-  const bytes = base64ToBytes(encoded);
-  const family = `FontPreview-${fontName.replace(/[^A-Za-z0-9]/g, "") || "font"}`;
-  const face = new FontFace(family, bytes);
-  await face.load();
-  document.fonts.add(face);
-  return family;
-}
-
-/** Reads the font families declared by the device's font configuration. */
-export async function listDeviceFamilies() {
-  const command = [
-    "for f in /system/etc/fonts.xml /system/etc/font_fallback.xml",
-    "/system_ext/etc/fonts_base.xml /system_ext/etc/fonts.xml",
-    "/product/etc/fonts.xml /product/etc/fonts_customization.xml",
-    "/vendor/etc/fonts.xml; do",
-    '[ -f "$f" ] && tr "\\n" " " < "$f" | grep -o "<family[^>]*>";',
-    "done",
-  ].join(" ");
-  let raw = "";
-  try {
-    raw = await exec(command, { timeout: 20000 });
-  } catch {
-    return [];
-  }
-  const families = new Map();
-  for (const tag of raw.split(/\r?\n/)) {
-    const name = (tag.match(/name="([^"]+)"/) || [])[1] || "";
-    const lang = (tag.match(/lang="([^"]+)"/) || [])[1] || "";
-    if (!name && !lang) continue;
-    const key = `${name}|${lang}`;
-    if (families.has(key)) continue;
-    families.set(key, {
-      name: name || lang,
-      lang,
-      cjk: /(^|[,;_-])(zh|yue|ja|ko)([,;_-]|$)/i.test(lang.replace(/\s+/g, "-")),
-      western: /sans-serif|serif|monospace|sys-sans|op-sans|sys-serif/i.test(name),
-    });
-  }
-  return [...families.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function formatBytes(bytes) {

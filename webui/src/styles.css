@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    Font Settings WebUI - Material 3 Expressive token layer and layout.
    Every colour is referenced through an M3 role custom property. The static
    values below are the documented Purple fallback scheme; theme.js overwrites
@@ -773,11 +773,38 @@ md-linear-progress {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-top: 8px;
 }
 
-md-chip-set {
-  --md-chip-container-height: 32px;
-  --md-assist-chip-label-text-font: var(--app-font-family);
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--md-sys-shape-corner-small);
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.status-chip md-icon {
+  font-size: 18px;
+}
+
+.status-chip[data-state="ok"] {
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.status-chip[data-state="error"] {
+  background-color: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+}
+
+.status-chip[data-state="pending"],
+.status-chip[data-state="busy"] {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
 }
 
 .status-line {

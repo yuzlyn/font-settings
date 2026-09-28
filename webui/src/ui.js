@@ -206,8 +206,11 @@ export function listGroup(items) {
       ${leading}
       <div slot="headline" class="typescale-body-large">${escapeHtml(item.headline)}</div>
       ${supporting}
-      <div slot="end" class="list-trailing">${trailing}</div>
+      <div slot="end" class="list-trailing"></div>
     </md-list-item>`);
+    const trailingHost = row.querySelector(".list-trailing");
+    if (trailing instanceof Node) trailingHost.append(trailing);
+    else trailingHost.innerHTML = String(trailing);
     if (item.onClick) row.addEventListener("click", item.onClick);
     group.append(row);
   });

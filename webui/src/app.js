@@ -1,7 +1,7 @@
-﻿/**
+/**
  * Font Settings WebUI - Material 3 Expressive application shell.
  *
- * Screens: 字型設定 (menu), 中文字型, 西文字型, Emoji 設定, 缺字回退.
+ * Screens: 字型設定 (menu), 中文字型, 西文字型, Emoji 設定.
  * Screen transitions use the standard motion scheme: the Chinese screen slides
  * in from the right, the Latin screen from the left, and going back replays
  * the entry animation in reverse (including the system back gesture).
@@ -11,18 +11,12 @@ import "./material.js";
 
 import { applyTheme, getThemeState, onThemeChange, updateAccentSeed, watchSystemTheme } from "./theme.js";
 import { describeError, locale, t } from "./i18n.js";
-import {
-  base64ToBytes,
-  exec,
-  hasKsuBridge,
-  parseProperties,
-  shellQuote,
-} from "./bridge.js";
+import { exec, hasKsuBridge, parseProperties, readDeviceFile } from "./bridge.js";
 import {
   abortUpload,
   EMOJI_PRESETS,
-  getStatus,
   getModuleDir,
+  getStatus,
   normalizeWeight,
   normalizeWesternSize,
   rebootDevice,
@@ -53,7 +47,6 @@ import {
 } from "./ui.js";
 import { buildMenuScreen, openStatusDialog } from "./screens/menu.js";
 import { buildEmojiScreen } from "./screens/emoji.js";
-import { buildFallbackScreen } from "./screens/fallback.js";
 import { buildRoleScreen, openFontDetailDialog } from "./screens/role.js";
 
 const stackHost = document.querySelector("[data-screen-stack]");
@@ -63,7 +56,6 @@ const state = {
   status: null,
   statusStamp: 0,
   cachedStatus: false,
-  families: [],
   preview: { chinese: null, western: null },
   error: null,
   busy: false,
@@ -78,7 +70,6 @@ const screens = {
   chinese: { id: "chinese", build: () => buildRoleScreen(ctx, "chinese") },
   latin: { id: "latin", build: () => buildRoleScreen(ctx, "western") },
   emoji: { id: "emoji", build: () => buildEmojiScreen(ctx) },
-  fallback: { id: "fallback", build: () => buildFallbackScreen(ctx) },
 };
 
 const navigationStack = [];
@@ -226,22 +217,6 @@ async function refresh({ silent = false } = {}) {
   }
 }
 
-async function loadFamilies() {
-  try {
-    const families = await listFamilies();
-    state.families = families;
-    await setState(stateKeys.families, { at: Date.now(), families });
-  } catch {
-    // keep cached families
-  }
-  refreshScreens();
-}
-
-async function listFamilies() {
-  const { listDeviceFamilies } = await import("./module-api.js");
-  return listDeviceFamilies();
-}
-
 async function requestFilePicker(accept) {
   return new Promise((resolve) => {
     const input = document.createElement("input");
@@ -329,28 +304,25 @@ async function importFromPath(role, path) {
     showMessage(t("pathInvalid"));
     return;
   }
-  const moduleDir = await resolveModuleDir();
-  const quoted = shellQuote(value);
   state.busy = true;
   state.upload = { role, percent: undefined };
   refreshScreens();
   try {
     showMessage(t("readingFile"), { timeout: 0 });
-    const statResult = await exec(
-      `if [ -f ${quoted} ]; then stat -c %s ${quoted}; else echo missing; fi`,
-      { timeout: 15000 },
-    );
-    if (statResult === "missing" || !/^\d+$/.test(statResult)) throw new Error("pathNotFound");
-    const size = Number(statResult);
-    const encoded = await exec(`base64 ${quoted}`, { timeout: 300000 });
-    const bytes = base64ToBytes(encoded);
-    if (bytes.byteLength !== size) throw new Error("pathNotFound");
+    // Chunked read: a single base64 of a 10 MB font froze the WebView.
+    const bytes = await readDeviceFile(value, {
+      onProgress: (fraction) => {
+        state.upload = { role, percent: fraction * 0.5 };
+        refreshScreens();
+      },
+    });
+    const size = bytes.byteLength;
     const name = value.split("/").pop() || "font.ttf";
     await rememberPath(value);
     await logActivity({ kind: "import", role, name, size });
     await uploadRoleBytes(role, name, bytes, {
       onProgress: (fraction) => {
-        state.upload = { role, percent: fraction };
+        state.upload = { role, percent: 0.5 + fraction * 0.5 };
         refreshScreens();
       },
     });
@@ -543,6 +515,7 @@ const ctx = {
     setEmoji,
     reboot,
     selectPreview,
+    bridgeLabelKey: () => (hasKsuBridge ? "connectedKsu" : "connectedLocal"),
     openStatusDialog: () => openStatusDialog(ctx),
     openFontDetail: (role, font, index, total) => openFontDetailDialog(ctx, role, font, index, total),
     describe: describeError,
@@ -558,9 +531,8 @@ async function boot() {
     state.theme = theme;
   });
 
-  const [cachedStatus, cachedFamilies, previewChinese, previewLatin, lastScreen] = await Promise.all([
+  const [cachedStatus, previewChinese, previewLatin, lastScreen] = await Promise.all([
     getState(stateKeys.status, null),
-    getState(stateKeys.families, null),
     getState(stateKeys.preview("chinese"), null),
     getState(stateKeys.preview("western"), null),
     getState(stateKeys.lastScreen, "menu"),
@@ -568,7 +540,6 @@ async function boot() {
 
   if (previewChinese) state.preview.chinese = previewChinese;
   if (previewLatin) state.preview.western = previewLatin;
-  if (cachedFamilies?.families?.length) state.families = cachedFamilies.families;
   if (cachedStatus?.status) {
     state.status = cachedStatus.status;
     state.cachedStatus = true;
@@ -590,7 +561,7 @@ async function boot() {
     if (navigationStack.length > 1) goBack();
   });
 
-  // Live data: module status, device families, system accent colour, version.
+  // Live data: module version and the system accent colour.
   void (async () => {
     try {
       const [settings, versionLine] = await Promise.all([
@@ -615,7 +586,6 @@ async function boot() {
   })();
 
   await refresh();
-  await loadFamilies();
   await setState(stateKeys.status, { at: Date.now(), status: state.status });
 }
 

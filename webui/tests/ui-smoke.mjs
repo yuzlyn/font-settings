@@ -194,7 +194,7 @@ try {
   check("chinese screen exists and is visible", chinese.exists && !chinese.hidden, JSON.stringify(chinese));
   check("chinese screen titled 中文字型", chinese.title === "中文字型", chinese.title);
   check("chinese screen lists the chain", chinese.chainRows === 2, `rows=${chinese.chainRows}`);
-  check("preview panel with exposed dropdown", chinese.previewPanel && chinese.previewSelect && chinese.previewOptions >= 4, JSON.stringify(chinese));
+  check("preview panel with exposed dropdown", chinese.previewPanel && chinese.previewSelect && chinese.previewOptions === 3, JSON.stringify(chinese));
   check("weight slider reflects module value 650", chinese.sliders.includes("650"), JSON.stringify(chinese.sliders));
   check("hash reflects the screen", chinese.hash === "#chinese", chinese.hash);
 
@@ -308,7 +308,7 @@ try {
   });
   check("add font dialog opens with file and path actions", addDialog.open && addDialog.buttons.includes("選擇檔案") && addDialog.buttons.includes("匯入"), JSON.stringify(addDialog));
 
-  // dismiss and go back twice, then open the fallback screen
+  // dismiss the dialog and use the inline fallback switch on the menu
   await page.evaluate(() => {
     const dialog = [...document.querySelectorAll("md-dialog")].find((item) => item.open);
     dialog.close?.();
@@ -318,18 +318,7 @@ try {
   await page.waitForTimeout(600);
   await page.evaluate(() => {
     const rows = [...document.querySelectorAll("section[data-screen='menu'] md-list-item")];
-    rows[4].click();
-  });
-  await page.waitForTimeout(700);
-  const fallbackScreen = await page.evaluate(() => {
-    const screen = document.querySelector("section[data-screen='fallback']");
-    const toggle = screen?.querySelector("md-switch");
-    return { title: screen?.querySelector(".screen-title")?.textContent.trim(), selected: toggle?.selected };
-  });
-  check("fallback screen reflects the enabled state", fallbackScreen.title === "缺字回退" && fallbackScreen.selected === true, JSON.stringify(fallbackScreen));
-
-  await page.evaluate(() => {
-    const toggle = document.querySelector("section[data-screen='fallback'] md-switch");
+    const toggle = rows[4].querySelector("md-switch");
     toggle.selected = false;
     toggle.dispatchEvent(new Event("change"));
   });
@@ -337,7 +326,20 @@ try {
   const fallbackCommand = await page.evaluate(() =>
     window.__commands.filter((command) => command.includes("fallback-set")).at(-1),
   );
-  check("toggling the switch calls fallback-set 0", /fallback-set 0$/.test(fallbackCommand || ""), fallbackCommand);
+  check("inline fallback switch calls fallback-set 0", /fallback-set 0$/.test(fallbackCommand || ""), fallbackCommand);
+
+  // Regression: no font bytes may ever cross the bridge from the UI itself
+  // (a base64 of a 10 MB font froze the WebView before).
+  await page.evaluate(() => document.querySelectorAll("section[data-screen='menu'] md-list-item")[1].click());
+  await page.waitForTimeout(1200);
+  const byteCommands = await page.evaluate(() => window.__commands.filter((command) => command.startsWith("base64 ")));
+  check("no font byte transfers when opening a font screen", byteCommands.length === 0, JSON.stringify(byteCommands.slice(0, 2)));
+
+  const chips = await page.evaluate(() => {
+    const chip = document.querySelector("section[data-screen='menu'] .status-chip");
+    return { text: chip?.textContent.trim(), state: chip?.dataset.state };
+  });
+  check("connection chip is visible on the menu", Boolean(chips.text) && chips.state === "ok", JSON.stringify(chips));
 
   // dark scheme uses the documented dark palette when no accent is available
   const darkPage = await browser.newPage({ viewport: { width: 412, height: 892 }, locale: "zh-TW", colorScheme: "dark" });

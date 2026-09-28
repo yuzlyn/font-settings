@@ -76,6 +76,40 @@ export function exec(command, options = {}) {
   return execKsu(command, options);
 }
 
+/**
+ * Reads a device file in bounded chunks.
+ *
+ * A single `base64 <file>` for a 10 MB font returns ~14 MB of stdout, which the
+ * WebView bridge turns into one enormous JavaScript string and freezes the UI.
+ * Reading in small pieces keeps every bridge call cheap and reports progress.
+ */
+export async function readDeviceFile(path, { chunkSize = 512 * 1024, onProgress, timeout = 20000 } = {}) {
+  const quoted = shellQuote(path);
+  const sizeText = await exec(
+    `if [ -f ${quoted} ]; then stat -c %s ${quoted}; else echo missing; fi`,
+    { timeout },
+  );
+  if (sizeText === "missing" || !/^\d+$/.test(sizeText)) throw new Error("pathNotFound");
+  const size = Number(sizeText);
+  const parts = [];
+  for (let offset = 0; offset < size; offset += chunkSize) {
+    const chunk = await exec(
+      `dd if=${quoted} bs=${chunkSize} skip=${Math.floor(offset / chunkSize)} count=1 2>/dev/null | base64`,
+      { timeout: 60000 },
+    );
+    parts.push(base64ToBytes(chunk));
+    onProgress?.(Math.min(1, (offset + chunkSize) / size));
+  }
+  const bytes = new Uint8Array(size);
+  let cursor = 0;
+  for (const part of parts) {
+    bytes.set(part.subarray(0, Math.min(part.length, size - cursor)), cursor);
+    cursor += part.length;
+  }
+  if (cursor !== size) throw new Error("pathNotFound");
+  return bytes;
+}
+
 /** POSIX single-quote escaping for values interpolated into shell commands. */
 export function shellQuote(value) {
   return `'${String(value).replaceAll("'", `'\\''`)}'`;

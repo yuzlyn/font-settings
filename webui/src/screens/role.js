@@ -72,18 +72,9 @@ export function buildRoleScreen(ctx, role) {
   let chainSignature = null;
   let sliderSignature = null;
 
-  function familiesForRole() {
-    const list =
-      role === "chinese"
-        ? ctx.state.families.filter((family) => family.cjk || /cjk|sc|tc|jp|kr|zh/i.test(family.name))
-        : ctx.state.families.filter((family) => !family.cjk);
-    return list.slice(0, 40);
-  }
-
   function renderPreview() {
-    const families = familiesForRole();
     const selected = ctx.state.preview[role];
-    const signature = `${chain.map((font) => font.name).join(",")}|${families.map((family) => family.name).join(",")}|${selected}`;
+    const signature = `${chain.map((font) => `${font.name}:${font.size}`).join(",")}|${selected}`;
     if (signature === previewSignature) return;
     previewSignature = signature;
     previewHost.textContent = "";
@@ -91,10 +82,8 @@ export function buildRoleScreen(ctx, role) {
       buildPreviewPanel({
         role,
         chain,
-        families,
         selected,
         onSelect: (value) => ctx.actions.selectPreview(role, value),
-        onError: (error) => showMessage(ctx.actions.describe(error)),
       }),
     );
   }
@@ -287,7 +276,7 @@ export async function openFontDetailDialog(ctx, role, font, index, total) {
       <div class="status-line"><span class="typescale-body-medium">${escapeHtml(t("fontDetailSlot"))}</span><span class="spacer"></span><span class="typescale-body-large">#${index + 1} / ${total}</span></div>
     </div>
     <div slot="actions" class="dialog-actions">
-      <md-text-button value="details">${escapeHtml(t("previewFamily"))}</md-text-button>
+      <md-text-button value="details">${escapeHtml(t("previewShowIn"))}</md-text-button>
       <md-text-button value="replace">${escapeHtml(t("replaceFont"))}</md-text-button>
       <md-text-button value="remove" class="danger">${escapeHtml(t("removeFont"))}</md-text-button>
       <md-filled-button value="close">${escapeHtml(t("close"))}</md-filled-button>

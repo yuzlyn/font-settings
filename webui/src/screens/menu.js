@@ -24,8 +24,13 @@ export function buildMenuScreen(ctx) {
         <md-icon-button variant="tonal" data-back aria-label="${escapeHtml(t("close"))}">
           ${icon("arrow_back")}
         </md-icon-button>
+        <span class="spacer"></span>
+        <md-icon-button variant="tonal" data-refresh aria-label="${escapeHtml(t("refresh"))}">
+          ${icon("refresh")}
+        </md-icon-button>
       </div>
       <h1 class="screen-title typescale-headline-medium-emphasized">${escapeHtml(t("appTitle"))}</h1>
+      <div class="status-chip-row" data-chips></div>
     </header>
     <div class="screen-content">
       <h2 class="section-label typescale-title-medium-emphasized">${escapeHtml(t("sectionEdit"))}</h2>
@@ -39,8 +44,51 @@ export function buildMenuScreen(ctx) {
     if (history.length > 1) history.back();
     else window.close();
   });
+  screen.querySelector("[data-refresh]").addEventListener("click", () => ctx.actions.refresh());
+
+  /* ------------------------------------------------------- connection chips */
+  const chips = screen.querySelector("[data-chips]");
+  let chipSignature = null;
+
+  function renderChips(next) {
+    const signature = `${Boolean(next.error)}|${next.status?.pendingReboot}|${next.busy}`;
+    if (signature === chipSignature) return;
+    chipSignature = signature;
+    chips.textContent = "";
+    const connected = !next.error && next.status;
+    chips.append(
+      el(`<span class="status-chip" data-state="${connected ? "ok" : "error"}">
+        ${icon(connected ? "check_circle" : "error", { filled: true })}
+        <span class="typescale-label-large">${escapeHtml(
+          connected ? t(ctx.actions.bridgeLabelKey()) : t("connectionFailed"),
+        )}</span>
+      </span>`),
+    );
+    if (next.status?.pendingReboot) {
+      chips.append(
+        el(`<span class="status-chip" data-state="pending">
+          ${icon("autorenew")}
+          <span class="typescale-label-large">${escapeHtml(t("statusPending"))}</span>
+        </span>`),
+      );
+    }
+    if (next.busy) {
+      chips.append(
+        el(`<span class="status-chip" data-state="busy">
+          ${icon("sync")}
+          <span class="typescale-label-large">${escapeHtml(t("working"))}</span>
+        </span>`),
+      );
+    }
+  }
 
   /* ------------------------------------------------------------ edit group */
+  const fallbackSwitch = el(`<md-switch ${state.status?.fallback ? "selected" : ""} aria-label="${escapeHtml(
+    t("fallbackLabel"),
+  )}"></md-switch>`);
+  fallbackSwitch.addEventListener("click", (event) => event.stopPropagation());
+  fallbackSwitch.addEventListener("change", () => ctx.actions.setFallback(Boolean(fallbackSwitch.selected)));
+
   const editGroup = listGroup([
     {
       headline: t("authorName"),
@@ -73,7 +121,8 @@ export function buildMenuScreen(ctx) {
       headline: t("fallbackLabel"),
       supporting: state.status?.fallback ? t("fallbackOnDetail") : t("fallbackOffDetail"),
       leading: "sort",
-      onClick: () => ctx.actions.navigate("fallback", { direction: "right" }),
+      trailing: fallbackSwitch,
+      onClick: () => fallbackSwitch.click(),
     },
   ]);
   screen.querySelector("[data-edit]").append(editGroup);
@@ -123,12 +172,22 @@ export function buildMenuScreen(ctx) {
   aboutGroup.append(fab);
   screen.querySelector("[data-about]").append(aboutGroup);
 
-  screen.update = (next) => {
-    const row = about.querySelector("md-list-item");
-    const supporting = row?.querySelector('[slot="supporting-text"]');
+  function update(next) {
+    renderChips(next);
+    const value = next.status?.fallback ?? true;
+    fallbackSwitch.selected = value;
+    const rows = about.querySelectorAll("md-list-item");
+    const supporting = rows[0]?.querySelector('[slot="supporting-text"]');
     if (supporting) supporting.textContent = statusSupporting(next);
-  };
+    const fallbackRow = editGroup.querySelectorAll("md-list-item")[4];
+    const fallbackSupport = fallbackRow?.querySelector('[slot="supporting-text"]');
+    if (fallbackSupport) {
+      fallbackSupport.textContent = value ? t("fallbackOnDetail") : t("fallbackOffDetail");
+    }
+  }
 
+  update(state);
+  screen.update = update;
   return screen;
 }
 
