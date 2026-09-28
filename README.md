@@ -1,16 +1,17 @@
 ﻿# Font Settings
 
 - 作者：**yuzlyn**
-- 版本：**v2.4.0**
+- 版本：**v2.4.1**
 - 模块 ID：`font-settings`
 
 这是一个适用于 Android 8.0+ 的通用 KernelSU 字体模块，不限定手机品牌或 ROM。模块提供离线 WebUI，中文与西文各自可上传多个 `.ttf` 字体并按顺序组成 font-family 回退链（缺字自动回退，支持拖拽排序），上传可变字体后可调节 `100`–`900` 字重，并可选择内置 iOS、Google、Blobmoji、Facebook Emoji 或上传自定义 `.ttf/.otf`。所有替换均通过 KernelSU systemless mount 生效，不直接修改系统分区。
 
 ## 下载
 
-- 完整包：[font-settings_v2.4.0_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.0/font-settings_v2.4.0_KSU.zip)，`178,904,144` 字节，SHA-256：`99BA854D7157DBC135C8C9F2B55BFDEDF680015A131D975DA8A39A5AE695C19C`。
-- 精简包：[font-settings_v2.4.0_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.0/font-settings_v2.4.0_lite_KSU.zip)，`33,183,417` 字节，SHA-256：`5D77BA5EB2B73A4E1460B96FAC46EBFCF1085C28598BAA11D4FB168D68D4EBB7`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+- 完整包：[font-settings_v2.4.1_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.1/font-settings_v2.4.1_KSU.zip)，`179,033,036` 字节，SHA-256：`01B5443875D81F3829B2A0C2B05A806B82FF85B699EED0A11F1C8514AA125D83`。
+- 精简包：[font-settings_v2.4.1_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.4.1/font-settings_v2.4.1_lite_KSU.zip)，`33,312,305` 字节，SHA-256：`DF7FA5751B371C968175776AE3DDB0928FDB668F78AE61A06E417CF5296351BF`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
 
+v2.4.1 修复 v2.4.0 新界面"卡死 / 图标不显示 / 组件逻辑混乱"三个问题。**卡死**的根因是预览面板与路径导入会把整个字体文件经 root bridge 读进 WebView——一个 10 MB 的中文字体变成约 14 MB 的 JavaScript 字符串，WebView 直接卡住；现在预览面板只展示字族名称与元数据（大小、可变/静态、链序），路径导入改为 512 KiB 分块读取并显示进度，任何大对象都不再跨桥，`ui-smoke` 与 `live-check` 都加入了"零字体字节传输"的回归断言。**图标**改为把 Material Symbols Rounded 与 Roboto Flex 以 `data:` URI 内联进 `fonts.css`，不再受宿主对 `.woff2` 的 MIME 处理影响（KernelSU 与 KsuWebUI 对未知扩展名回退 `text/plain`）。**交互**简化：缺字回退改成列表行内开关（不再跳转独立页面）、菜单顶部新增连线/待重启/处理中状态标签与重新整理按钮、预览下拉只列出该角色真实存在的字族（系统预设 + 模块字体链），不再列出无法操作的设备字族。
 v2.4.0 按 Material 3 Expressive 重写整个 WebUI。前端改为独立源码目录 `webui/`，用 esbuild 打包成单个离线 `app.js`，组件全部来自 Google 官方 Material Web（列表、FAB、下拉、对话框、滑杆、开关、输入框、进度），字体改为本地 `Roboto Flex` 可变字体与按需裁剪的 `Material Symbols Rounded`；页面结构变为 `字型設定` / `中文字型` / `西文字型` 三屏加 `Emoji 設定`、`缺字回退` 两个设置页，中文字型从右滑入、西文字型从左滑入，返回时反向播放（含系统返回手势）；新增 380×220dp 预览面板与「已有字族」exposed dropdown（选项来自字体链真实字体文件与设备字族），列表改为 M3 Expressive 分段样式（72dp 行高、3dp 间隔、28/8dp 圆角），重启 FAB 叠放在「關於」列表组上；配色改为「可取用系统强调色、取不到时回退到文档指定的紫色方案」，浅色/深色跟随系统。上传、删除、拖拽排序、字重/字号滑杆、Emoji 选择等原有功能保持不变，浏览器本地状态改用 IndexedDB 持久化。
 
 v2.3.6 修复删除全部字体后无法恢复系统默认、个别用户重启不开机的问题。此前把所有中英文字体删除后，链为空时生成器仍会回退引用模块自带的默认字体文件（这些文件已随删除一并移除），生成的字型 XML 会指向不存在的文件，部分设备重启时因此卡在开机界面；同时删光字体也并不能真正回到系统默认（配置仍注入内置字体）。现在链为空时生成器原样输出设备原始字族——不引用任何缺失文件，重启后即为系统默认字体，WebUI 的计数处会提示“使用系统默认字体（重启后生效）”。另外修复了模块升级偶发丢失全部上传字体的问题：`customize.sh` 之前只在内置默认字体仍存在时才保留字体链，删除过默认字体的用户（链中只剩 `-N` 槽位文件）升级后上传字体被静默清空，现在只要模块目录里有任何已上传字体都会完整保留。
@@ -131,7 +132,7 @@ WebUI 已按 Material 3 Expressive 重写，使用 Google 官方的 Material Web
 
 列表为 M3 Expressive 分段样式：行高 72dp、行间 3dp、组外圆角 28dp、相邻内侧圆角 8dp，行内 24dp 图标放在 40dp 的 `primaryContainer` 圆形上，作者一行整体使用 `primaryContainer` / `onPrimaryContainer`。重启按钮是叠放在「關於」列表组之上、垂直居中靠右的 `power_settings_new` 色调 FAB（`primaryContainer`，56dp／16dp 圆角，Level 3 阴影）；字体页的新增按钮是右下角悬浮的 `add` FAB。图标按钮为 56dp 圆形（M 尺寸），文字使用 Roboto Flex 的 emphasized 字重（标题 28sp / wght 700，区段标签 16sp / wght 600）。
 
-字体页包含一个预览面板：`380×220dp` 的 `surfaceContainerHigh` 容器（28dp 圆角）显示样张，标签为「已有字族」的填充式 exposed dropdown（56dp 高，箭头 `arrow_drop_down`，展开项 48dp、`surfaceContainer`、4dp 圆角）横跨容器下缘并绘制在其前方。下拉选项来自字体链中已上传的字体（选中时通过 root bridge 读取真实字体文件并以 `FontFace` 载入，样张即真实字形）以及设备字体配置里声明的字族（中文字体页优先 CJK 字族，西文字体页列出西文字族）。上传、删除、拖拽排序、字重与字号滑杆、缺字回退开关、Emoji 预设选择与 Emoji 自订上传都在新界面内完成；上传时页面显示线性进度，删除会先弹确认对话框并提示“删除全部字型会回到系统预设”。
+字体页包含一个预览面板：`380×220dp` 的 `surfaceContainerHigh` 容器（28dp 圆角）显示样张，标签为「已有字族」的填充式 exposed dropdown（56dp 高，箭头 `arrow_drop_down`，展开项 48dp、`surfaceContainer`、4dp 圆角）横跨容器下缘并绘制在其前方。下拉选项只列出该角色真实存在的字族——系统预设与模块字体链，选择后显示该字族的名称、大小与类型（可变/静态，并标注链序）。面板不会从设备读取字体字节，因此瞬时响应、不会拖住界面。上传、删除、拖拽排序、字重与字号滑杆、缺字回退开关、Emoji 预设选择与 Emoji 自订上传都在新界面内完成；上传时页面显示线性进度，删除会先弹确认对话框并提示“删除全部字型会回到系统预设”。
 
 浏览器本地状态（预览选择、最近的导入路径、设备字族与状态的缓存、本机活动记录）保存在 IndexedDB，重新载入后仍在；取不到数据时显示空状态与操作提示。当 WebUI 由未实现系统文件选择器的宿主承载（如 Magisk 上的 KsuWebUIStandalone 或 MMRL）时，点击“添加字体”与 Emoji“自定义文件”会先尝试打开系统选择器，宿主约 1 秒内无响应才弹出路径导入对话框：粘贴绝对路径即可从设备读取字体。
 
@@ -270,7 +271,7 @@ sh tests/fontconfig-test.sh
 ## 许可与来源
 
 - 界面组件使用 Google Material Web 2.4.0（Apache License 2.0）；`about` 与 `donate` 页面仍使用 MDUI 2.1.5（MIT License，`webroot/vendor/MDUI-LICENSE.txt`）。
-- 字体：Roboto Flex 与 Material Symbols Rounded 取自 Google Fonts，Apache License 2.0，已按用到的字符与图标子集化并离线打包在 `webroot/assets/fonts/`。
+- 字体：Roboto Flex 与 Material Symbols Rounded 取自 Google Fonts，Apache License 2.0，已按用到的字符与图标子集化，并在构建时以 `data:` URI 内联进 `webroot/assets/fonts/fonts.css`（不依赖宿主对 `.woff2` 的 MIME 处理）。
 - 动态色板使用 Google Material Color Utilities 0.3.0，Apache License 2.0 已包含在 `webroot/vendor/MaterialColorUtilities-LICENSE.txt`。
 - 动态生成器只使用安装设备自身的 Android 字体配置，不再内置或分发任何特定 ROM 的 XML。
 - 使用或分发自定义字体前，请自行确认对应字体授权。
