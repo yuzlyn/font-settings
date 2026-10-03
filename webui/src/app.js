@@ -176,7 +176,7 @@ function navigate(id, { direction = "right" } = {}) {
   navigationStack.push({ id, direction });
   const outgoing = current ? screenCache.get(current.id)?.element : null;
   const element = renderScreen(id, { entering: direction, leaving: outgoing, direction: opposite(direction) });
-  element?.update?.(state);
+  safeUpdate(element);
   pushHistory(id);
 }
 
@@ -187,15 +187,15 @@ function switchTab(id) {
   const currentIndex = TAB_IDS.indexOf(current?.id);
   const targetIndex = TAB_IDS.indexOf(id);
   // The slide direction follows the relative tab position: clicking a tab on
-  // the right slides the new page in from the left (content moves left-to-right),
+  // the right slides the new page in from the right (content moves right-to-left),
   // and clicking a tab on the left is the reverse.
-  const entering = targetIndex > currentIndex ? "left" : "right";
+  const entering = targetIndex > currentIndex ? "right" : "left";
   const direction = opposite(entering);
   const outgoing = current ? screenCache.get(current.id)?.element : null;
   navigationStack.length = 0;
   navigationStack.push({ id, direction });
   const element = renderScreen(id, { entering, leaving: outgoing, direction });
-  element?.update?.(state);
+  safeUpdate(element);
   replaceHistory(id);
 }
 
@@ -208,8 +208,18 @@ function goBack() {
     navigationStack.length = 0;
     navigationStack.push({ id: "menu", direction: "right" });
     const incoming = renderScreen("menu", { entering: "left", leaving: outgoing, direction: "right" });
-    incoming?.update?.(state);
+    safeUpdate(incoming);
     replaceHistory("menu");
+  }
+}
+
+/** Runs a screen's update() without letting a patch error take down the app. */
+function safeUpdate(element) {
+  if (!element || typeof element.update !== "function") return;
+  try {
+    element.update(state);
+  } catch (error) {
+    console.error("screen update failed", error);
   }
 }
 
@@ -221,7 +231,7 @@ function goBack() {
 function refreshScreens() {
   const top = navigationStack.at(-1);
   if (!top) return;
-  screenCache.get(top.id)?.element?.update?.(state);
+  safeUpdate(screenCache.get(top.id)?.element);
 }
 
 /* ---------------------------------------------------------------- actions */
@@ -566,7 +576,22 @@ globalThis.FontSettingsDebug = { state, ctx, screens: () => [...document.querySe
 
 /* -------------------------------------------------------------------- boot */
 
+/** Shows the boot-error box instead of leaving a blank page on a fatal error. */
+function fatal(message) {
+  try {
+    const box = document.getElementById("boot-error");
+    const line = document.getElementById("boot-error-text");
+    if (box && line) {
+      box.hidden = false;
+      line.textContent = String(message || "WebUI 啟動失敗");
+    }
+  } catch {
+    // Last resort: nothing left to render.
+  }
+}
+
 async function boot() {
+  try {
   applyTheme();
   watchSystemTheme();
   onThemeChange((theme) => {
@@ -629,6 +654,10 @@ async function boot() {
 
   await refresh();
   await setState(stateKeys.status, { at: Date.now(), status: state.status });
+  } catch (error) {
+    console.error("boot failed", error);
+    fatal(error?.message || "boot_failed");
+  }
 }
 
 void boot();

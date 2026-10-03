@@ -98,10 +98,28 @@ export function buildRoleScreen(ctx, role) {
         event.stopPropagation();
         ctx.actions.openFontDetail(role, font, index, chain.length);
       });
-      row.addEventListener("click", () => ctx.actions.openFontDetail(role, font, index, chain.length));
-      row.querySelector(".chain-handle").addEventListener("pointerdown", (event) =>
-        startDrag(ctx, screen, role, index, row, event),
+      row.addEventListener("click", () => {
+        // A drag that ended just now also fires a click; swallow it so the
+        // detail dialog does not pop open right after reordering.
+        if (ctx.state.dragMoved) {
+          ctx.state.dragMoved = false;
+          return;
+        }
+        ctx.actions.openFontDetail(role, font, index, chain.length);
+      });
+      const handle = row.querySelector(".chain-handle");
+      handle.addEventListener(
+        "touchstart",
+        (event) => {
+          const touch = event.touches[0];
+          if (touch) startDrag(ctx, screen, role, index, row, touch.clientY, "touch");
+        },
+        { passive: true },
       );
+      handle.addEventListener("mousedown", (event) => {
+        if (event.button !== 0) return;
+        startDrag(ctx, screen, role, index, row, event.clientY, "mouse");
+      });
       group.append(row);
     });
     chainHost.append(group);
@@ -182,41 +200,53 @@ export function buildRoleScreen(ctx, role) {
 
 /* --------------------------------------------------------------- reordering */
 
-function startDrag(ctx, screen, role, index, row, event) {
+function startDrag(ctx, screen, role, index, row, clientY, type) {
   if (ctx.state.busy) return;
-  if (event.pointerType === "mouse" && event.button !== 0) return;
   const rect = row.getBoundingClientRect();
   const state = {
     role,
     index,
     row,
-    pointerId: event.pointerId,
-    grabOffsetY: event.clientY - rect.top,
+    grabOffsetY: clientY - rect.top,
     originalTop: rect.top,
     height: rect.height,
     moved: false,
+    dy: 0,
+    raf: 0,
   };
   ctx.state.dragState = state;
+  ctx.state.dragMoved = false;
   row.classList.add("chain-dragging");
-  event.currentTarget.setPointerCapture(event.pointerId);
 
-  const onMove = (moveEvent) => {
-    if (moveEvent.pointerId !== state.pointerId) return;
-    const dy = moveEvent.clientY - state.grabOffsetY - state.originalTop;
-    if (Math.abs(dy) > 4) state.moved = true;
-    row.style.transform = `translateY(${dy}px)`;
-    moveEvent.preventDefault();
-  };
+  function onMove(y) {
+    state.dy = y - state.grabOffsetY - state.originalTop;
+    if (Math.abs(state.dy) > 4) state.moved = true;
+    if (!state.raf) {
+      state.raf = requestAnimationFrame(() => {
+        state.raf = 0;
+        row.style.transform = `translateY(${state.dy}px)`;
+      });
+    }
+  }
 
-  const onUp = async (upEvent) => {
-    if (upEvent.pointerId !== state.pointerId) return;
-    document.removeEventListener("pointermove", onMove);
-    document.removeEventListener("pointerup", onUp);
-    document.removeEventListener("pointercancel", onCancel);
+  function cleanup() {
+    if (state.raf) cancelAnimationFrame(state.raf);
+    if (type === "mouse") {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    } else {
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend", onTouchEnd);
+      document.removeEventListener("touchcancel", onTouchEnd);
+    }
     ctx.state.dragState = null;
     row.style.transform = "";
     row.classList.remove("chain-dragging");
-    const centerY = upEvent.clientY - state.grabOffsetY + state.height / 2;
+  }
+
+  async function finish(y) {
+    cleanup();
+    const centerY = y - state.grabOffsetY + state.height / 2;
     const container = row.parentElement;
     const rows = [...container.querySelectorAll(".chain-row")].filter((item) => item !== row);
     let target = 0;
@@ -225,24 +255,35 @@ function startDrag(ctx, screen, role, index, row, event) {
       if (centerY > itemRect.top + itemRect.height / 2) target += 1;
     }
     if (!state.moved || target === index) return;
+    ctx.state.dragMoved = true;
     await ctx.actions.reorder(role, index, target);
-    screen.remove();
-  };
+  }
 
-  const onCancel = (cancelEvent) => {
-    if (cancelEvent.pointerId !== state.pointerId) return;
-    document.removeEventListener("pointermove", onMove);
-    document.removeEventListener("pointerup", onUp);
-    document.removeEventListener("pointercancel", onCancel);
-    ctx.state.dragState = null;
-    row.style.transform = "";
-    row.classList.remove("chain-dragging");
-  };
+  function onMouseMove(event) {
+    onMove(event.clientY);
+  }
+  function onMouseUp(event) {
+    finish(event.clientY);
+  }
+  function onTouchMove(event) {
+    // preventDefault here (not on touchstart) reliably stops the WebView from
+    // taking over the gesture as a scroll and cancelling the drag.
+    event.preventDefault();
+    onMove(event.touches[0].clientY);
+  }
+  function onTouchEnd(event) {
+    const touch = event.changedTouches[0];
+    finish(touch ? touch.clientY : state.originalTop + state.grabOffsetY);
+  }
 
-  document.addEventListener("pointermove", onMove);
-  document.addEventListener("pointerup", onUp);
-  document.addEventListener("pointercancel", onCancel);
-  event.preventDefault();
+  if (type === "mouse") {
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  } else {
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    document.addEventListener("touchend", onTouchEnd);
+    document.addEventListener("touchcancel", onTouchEnd);
+  }
 }
 
 /* ----------------------------------------------------------- detail dialog */

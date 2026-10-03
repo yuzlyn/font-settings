@@ -772,6 +772,9 @@ md-list-item[data-tone="primary-container"] .list-leading {
   box-shadow: var(--md-sys-elevation-level2, 0 2px 6px rgba(0, 0, 0, 0.3));
   z-index: 2;
   position: relative;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .chain-copy {
@@ -808,6 +811,9 @@ md-list-item[data-tone="primary-container"] .list-leading {
   margin-inline-start: -8px;
   cursor: grab;
   touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   color: var(--md-sys-color-on-surface-variant);
   border-radius: var(--md-sys-shape-corner-full);
 }

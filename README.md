@@ -1,15 +1,17 @@
 # Font Settings
 
 - 作者：**yuzlyn**
-- 版本：**v2.5.0**
+- 版本：**v2.5.1**
 - 模块 ID：`font-settings`
 
 这是一个适用于 Android 8.0+ 的通用 KernelSU 字体模块，不限定手机品牌或 ROM。模块提供离线 WebUI，中文与西文各自可上传多个 `.ttf` 字体并按顺序组成 font-family 回退链（缺字自动回退，支持拖拽排序），上传可变字体后可调节 `100`–`900` 字重，并可选择内置 iOS、Google、Blobmoji、Facebook Emoji 或上传自定义 `.ttf/.otf`。所有替换均通过 KernelSU systemless mount 生效，不直接修改系统分区。
 
 ## 下载
 
-- 完整包：[font-settings_v2.5.0_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.5.0/font-settings_v2.5.0_KSU.zip)，`171,004,714` 字节，SHA-256：`11478DC668B404192D046CD98BDF3F7E978A48A2C2C47EA393E45A585AEE08ED`。
-- 精简包：[font-settings_v2.5.0_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.5.0/font-settings_v2.5.0_lite_KSU.zip)，`25,283,987` 字节，SHA-256：`793257B20DF6B28DB5811561ED74B6DC3F58176E4C3D17DFF70B42DECC960313`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+- 完整包：[font-settings_v2.5.1_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.5.1/font-settings_v2.5.1_KSU.zip)，`171,005,027` 字节，SHA-256：`B30997EAA2AFB8E830288328A3C7D58A88B11BE08176BCD02AC1A92368F79290`。
+- 精简包：[font-settings_v2.5.1_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.5.1/font-settings_v2.5.1_lite_KSU.zip)，`25,284,300` 字节，SHA-256：`780A4FEAB2768296323711372FEDBCB62D2EE04744D7D1D2CD73E47F83782D78`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+
+v2.5.1 修复 WebUI 若干问题：拖拽字族间歇性拖不动（改用触摸事件并阻止滚动接管，去掉卡顿）、拖拽重排成功后偶发白屏、弹窗底部按钮与长文本溢出、最近路径列表不显示路径文字、底栏切换动画方向反转、启动与屏幕更新增加错误兜底。
 
 v2.5.0 将内置默认字体改为可变字体 `NotoSansTC > NotoSansSC > NotoSansJP`（中文）与 `Google Sans Code`（西文），替换原来的 `PingRoundSCVF` / `CaesiumVF`，完整包体积约 `171 MB`；WebUI 重构为 6 屏结构（`字型設定` / `漢字字型` / `拉丁文字型` / `Emoji 設定` / `介紹` / `關於`）并新增底部导航栏（字型 / 介紹 / 關於），配色、动效与组件保持 Material 3 Expressive。
 
