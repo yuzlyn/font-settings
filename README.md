@@ -1,15 +1,17 @@
 # Font Settings
 
 - 作者：**yuzlyn**
-- 版本：**v2.5.1**
+- 版本：**v2.5.2**
 - 模块 ID：`font-settings`
 
 这是一个适用于 Android 8.0+ 的通用 KernelSU 字体模块，不限定手机品牌或 ROM。模块提供离线 WebUI，中文与西文各自可上传多个 `.ttf` 字体并按顺序组成 font-family 回退链（缺字自动回退，支持拖拽排序），上传可变字体后可调节 `100`–`900` 字重，并可选择内置 iOS、Google、Blobmoji、Facebook Emoji 或上传自定义 `.ttf/.otf`。所有替换均通过 KernelSU systemless mount 生效，不直接修改系统分区。
 
 ## 下载
 
-- 完整包：[font-settings_v2.5.1_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.5.1/font-settings_v2.5.1_KSU.zip)，`171,005,027` 字节，SHA-256：`B30997EAA2AFB8E830288328A3C7D58A88B11BE08176BCD02AC1A92368F79290`。
-- 精简包：[font-settings_v2.5.1_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.5.1/font-settings_v2.5.1_lite_KSU.zip)，`25,284,300` 字节，SHA-256：`780A4FEAB2768296323711372FEDBCB62D2EE04744D7D1D2CD73E47F83782D78`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+- 完整包：[font-settings_v2.5.2_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.5.2/font-settings_v2.5.2_KSU.zip)，`170,888,747` 字节，SHA-256：`C44D2BE1B6EAAFB2FE45A8FB4DA60BACE68BF35A5BED649E6CDDCDA81CFC54FE`。
+- 精简包：[font-settings_v2.5.2_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.5.2/font-settings_v2.5.2_lite_KSU.zip)，`25,168,020` 字节，SHA-256：`C648956C56AAE1A98463BEC228EAC47F64CFAD7408271BE608875222D29E9380`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+
+v2.5.2 重写 WebUI：移除 Material Web 运行时，改为自行实现的 Material 3 Expressive 渲染层，`app.js` 由 425 KiB 降到 90 KiB，图标字体按实际使用的 27 个图标重建；顶栏改为滚动收起的 large app bar，新增底部弹层、操作超过两个时纵向堆叠的对话框与 Expressive 滑块，触摸目标统一到 48dp。修复图标名不在子集时退化为文字、快速切换标签/返回时被上一段淡出定时器隐藏、英文窄屏横向溢出；新增真机 `live-check`（真实 root 后端）与 `device-check`（设备 busybox httpd 的 MIME/静态资源）与 56 项无头断言。
 
 v2.5.1 修复 WebUI 若干问题：拖拽字族间歇性拖不动（改用触摸事件并阻止滚动接管，去掉卡顿）、拖拽重排成功后偶发白屏、弹窗底部按钮与长文本溢出、最近路径列表不显示路径文字、底栏切换动画方向反转、启动与屏幕更新增加错误兜底。
 
@@ -127,17 +129,19 @@ font-settings/emoji/
 
 ## WebUI
 
-WebUI 已按 Material 3 Expressive 重写，使用 Google 官方的 Material Web 组件（`md-list`、`md-list-item`、`md-fab`、`md-filled-select`、`md-dialog`、`md-slider`、`md-switch`、`md-outlined-text-field`、`md-linear-progress`、`md-icon-button`、`md-icon`），随模块离线打包，不依赖网络：组件与页面脚本由 esbuild 打成单个 `webroot/app.js`（约 360 KiB），字体与图标使用本地 `Roboto Flex`（latin / latin-ext 可变子集）与 `Material Symbols Rounded`（按用到的 37 个图标裁剪，约 45 KiB）。
+WebUI 是按 Material 3 Expressive 自行实现的独立渲染层，不再依赖 Material Web 运行时：页面与组件由 esbuild 打成单个 `webroot/app.js`（约 90 KiB），字体使用本地 `Roboto Flex`（latin / latin-ext 可变子集）与按实际用到的 27 个图标裁剪的 `Material Symbols Rounded`（约 37 KiB）。所有字体都以 data URI 内联，避免宿主把 `.woff2` 当作 `text/plain` 返回而导致图标或文字失效。
 
-目标是竖屏手机 `412×892dp`，所有颜色都通过 M3 角色引用。浏览器或系统能提供用户强调色时（KernelSU/Android 的 Monet `system_palette`，或用 `?seed=RRGGBB` 显式指定），页面用 Material Color Utilities 的 HCT `SchemeTonalSpot` 生成完整浅色/深色方案；取不到时保留文档指定的 Purple 备用配色（浅色 `primary #6750A4`、深色 `primary #D2BCFC`，`surface` 等角色同表）。浅色/深色跟随系统 `prefers-color-scheme`，切换时只更新 token，不重排页面。
+目标是竖屏手机 `412×892dp`，所有颜色都通过 M3 角色引用。浏览器或系统能提供用户强调色时（KernelSU/Android 的 Monet `system_palette`，或用 `?seed=RRGGBB` 显式指定），页面用 Material Color Utilities 的 HCT `SchemeTonalSpot` 生成完整浅色/深色方案；取不到时保留 `styles.css` 中定义的 Purple 备用配色（浅色 `primary #6750A4`，深色 `primary #D2BCFC`）。浅色/深色跟随系统 `prefers-color-scheme`，切换时只更新 token，不重排页面。
 
-共 3 个主屏幕加 2 个设置页：`字型設定`（分段列表：作者、中文字型、西文字型、Emoji 設定、缺字回退；關於區：系統狀態、tg 群組、QQ 群組、原始碼儲存庫、贊助作者）、`中文字型`、`西文字型`，以及 `Emoji 設定` 与 `缺字回退`。“中文字型”从右侧滑入、“西文字型”从左侧滑入，返回时反向播放同一段过渡（含系统返回手势／返回键），过渡使用 `MotionScheme.standard()` 的标准缓动与 400ms 时长，不回弹；开启“减少动态效果”时过渡降级为 1ms。
+页面为三个标签页（`字型` / `介紹` / `關於`）加三个二级页（`漢字字型` / `拉丁文字型` / `Emoji`）。顶栏采用 M3 large app bar 形式：页面标题位于首屏正文（`t-display` / `t-headline`），滚动后标题收进 64dp 顶栏并把背景切换为 `surfaceContainer`。二级页从右侧滑入、返回反向播放（含系统返回手势），使用标准缓动与 450ms 时长；开启“减少动态效果”时降为 1ms。
 
-列表为 M3 Expressive 分段样式：行高 72dp、行间 3dp、组外圆角 28dp、相邻内侧圆角 8dp，行内 24dp 图标放在 40dp 的 `primaryContainer` 圆形上，作者一行整体使用 `primaryContainer` / `onPrimaryContainer`。重启按钮是叠放在「關於」列表组之上、垂直居中靠右的 `power_settings_new` 色调 FAB（`primaryContainer`，56dp／16dp 圆角，Level 3 阴影）；字体页的新增按钮是右下角悬浮的 `add` FAB。图标按钮为 56dp 圆形（M 尺寸），文字使用 Roboto Flex 的 emphasized 字重（标题 28sp / wght 700，区段标签 16sp / wght 600）。
+列表为 M3 Expressive 分段样式：约 68dp 行高、3dp 间隔、组外圆角 28dp 与内侧圆角 8dp，行首是 40dp `secondaryContainer` 圆形图标容器。字型链的每一行带 28dp 序号胶囊、文件名、`#順序 · 大小 · 可变/静态` 说明与拖拽把手；拖拽改用触摸事件并在 `touchmove` 中阻止默认行为，避免被 WebView 的滚动接管。`字型` 页顶部是实时字型链预览（样张 + 漢字/拉丁首字型名）与连接、数量、待重启状态胶囊。
 
-字体页包含一个预览面板：`380×220dp` 的 `surfaceContainerHigh` 容器（28dp 圆角）显示样张，标签为「已有字族」的填充式 exposed dropdown（56dp 高，箭头 `arrow_drop_down`，展开项 48dp、`surfaceContainer`、4dp 圆角）横跨容器下缘并绘制在其前方。下拉选项来自字体链中已上传的字体（选中时通过 root bridge 读取真实字体文件并以 `FontFace` 载入，样张即真实字形）以及设备字体配置里声明的字族（中文字体页优先 CJK 字族，西文字体页列出西文字族）。上传、删除、拖拽排序、字重与字号滑杆、缺字回退开关、Emoji 预设选择与 Emoji 自订上传都在新界面内完成；上传时页面显示线性进度，删除会先弹确认对话框并提示“删除全部字型会回到系统预设”。
+输入组件同样为原生实现：滑块是 16dp 粗轨道与 4×44dp 把手的 Expressive 样式，点击数值胶囊可输入精确值并做范围校验；Emoji 来源等选择使用 28dp 圆角的底部弹层（scrim、Escape 关闭、`aria-selected` 标注当前项）；对话框在操作超过两个时自动纵向堆叠，长文本与长按钮不会溢出。上传时显示线性进度，删除与重启前会弹出确认对话框。
 
-浏览器本地状态（预览选择、最近的导入路径、设备字族与状态的缓存、本机活动记录）保存在 IndexedDB，重新载入后仍在；取不到数据时显示空状态与操作提示。当 WebUI 由未实现系统文件选择器的宿主承载（如 Magisk 上的 KsuWebUIStandalone 或 MMRL）时，点击“添加字体”与 Emoji“自定义文件”会先尝试打开系统选择器，宿主约 1 秒内无响应才弹出路径导入对话框：粘贴绝对路径即可从设备读取字体。
+浏览器本地状态（最近导入路径、设备状态缓存、活动记录）保存在 IndexedDB，重新载入后仍在。当 WebUI 由未实现系统文件选择器的宿主承载（如 Magisk 上的 KsuWebUIStandalone 或 MMRL）时，点击“新增字型”与 Emoji“自訂檔案”会先尝试打开系统选择器，宿主约 1 秒内无响应才弹出路径导入对话框：粘贴绝对路径即可从设备读取字体；KernelSU 原生 WebUI 与浏览器保持一键选择器。
+
+v2.5.2 起的安装包即包含上述实现；只改前端时可按下文「只更新 WebUI」替换 `webroot/`，不必重打 zip。
 
 ![字型設定](./fontsetting-mobile-menu.png)
 
@@ -207,7 +211,7 @@ font-settings/
 │   └── fontxml.awk         # family 级 XML 转换器（按回退链生成多个 family）
 └── webroot/
     ├── index.html          # 生成的页面外壳（引用 app.js / styles.css / assets/fonts）
-    ├── app.js              # esbuild 打包产物：应用 + Material Web 组件（约 360 KiB）
+    ├── app.js              # esbuild 打包产物：应用 + 自建组件层（约 90 KiB）
     ├── styles.css          # M3 token 层、字体样式、动效与布局
     ├── font-isolation.js  # 中西文 cmap 隔离与 SFNT 重建
     ├── theme-cache.js     # 关于页的 Monet 缓存工具（主界面已改用 webui/src/theme.js）
@@ -217,7 +221,7 @@ font-settings/
     ├── donate.html         # 支付宝与微信支付捐赠页面
     ├── donate.css
     ├── assets/
-    │   ├── fonts/          # Roboto Flex 与 Material Symbols Rounded 离线子集
+    │   ├── fonts/          # Roboto Flex 与 Material Symbols Rounded 离线子集（图标 27 个）
     │   ├── alipay.jpg
     │   ├── wechat.png
     │   └── yuzlyn-github.png
@@ -234,12 +238,14 @@ webui/                       # 前端源码（构建到 font-settings/webroot）
 │   ├── bridge.js            # ksu / HTTP 双通道 root 命令桥
 │   ├── module-api.js        # fontctl 封装、上传管线、字体校验、设备字族枚举
 │   ├── store.js             # IndexedDB 本地状态（预览、路径、缓存、活动记录）
-│   ├── ui.js                # 对话框、snackbar、列表组、滑杆等 UI 辅助
-│   ├── screens/             # menu / role（中文·西文）/ emoji / fallback
-│   ├── components/          # 预览面板（380×220 容器 + exposed dropdown）
+│   ├── ui.js                # 组件层：图标、列表、开关、滑块、对话框、底部弹层、snackbar
+│   ├── screens/             # menu / role（汉字·拉丁）/ emoji / about / readme
 │   └── assets/fonts/        # 离线字体与其 @font-face 样式表
 └── tests/
-    ├── ui-smoke.mjs         # 无头冒烟测试（35 项断言，含配色、版式、动效与交互）
+    ├── harness.mjs          # 静态服务 + mock KernelSU bridge + 状态夹具
+    ├── ui-smoke.mjs         # 无头冒烟测试（56 项断言，含配色、版式、a11y 与交互）
+    ├── device-check.mjs     # 校验设备 busybox httpd 的 MIME、离线字体与首屏
+    ├── live-check.mjs       # 对真机内置服务跑真实数据（不 mock bridge）
     └── screenshots.mjs      # 生成浅色/深色各屏幕截图，便于设计复核
 ```
 
@@ -253,14 +259,27 @@ node build-font-setting.mjs       # 内置字体、MaterialKolor 色板与 MDUI 
 node webui/build.mjs              # 生产构建：打包 WebUI 到 font-settings/webroot
 node tests/font-isolation-test.cjs
 node tests/upload-transfer-test.cjs
-node webui/tests/ui-smoke.mjs     # 无头界面冒烟测试（35 项断言）
+node webui/tests/ui-smoke.mjs     # 无头界面冒烟测试（56 项断言）
 ```
 
-需要复核视觉时用 `node webui/tests/screenshots.mjs`（输出到 `webui/.screenshots/`，浅色与深色各屏幕）。真机验证模块自带 WebUI 服务时，用设备上的 busybox httpd 托管构建产物再跑 `node webui/tests/device-check.mjs`（需先 `adb forward tcp:7131 tcp:7131`），它会检查设备实际返回的 MIME、离线字体加载、图标连字与首屏结构。字体配置转换器夹具测试需要在 Android shell 中运行：
+需要复核视觉时用 `node webui/tests/screenshots.mjs`（输出到 `webui/.screenshots/`，浅色与深色各屏幕）。真机验证分两条：`node webui/tests/live-check.mjs http://127.0.0.1:7125`（先 `adb forward tcp:7125 tcp:7125`）走真实 root bridge 读取状态、字型链并验证返回导航；`node webui/tests/device-check.mjs http://127.0.0.1:7125` 用 mock bridge 校验设备 busybox httpd 实际返回的 MIME、离线字体、图标连字与首屏结构。字体配置转换器夹具测试需要在 Android shell 中运行：
 
 ```sh
 sh tests/fontconfig-test.sh
 ```
+
+### 只更新 WebUI（不重打 zip）
+
+KernelSU 从模块 `webroot/` 打开页面，浏览器访问 `127.0.0.1:7125` 时用的是 `service.sh` 同步出来的 `/data/adb/font-settings/webui/` 副本，所以两处都要替换：
+
+```powershell
+adb push font-settings\webroot /data/local/tmp/new-webroot
+adb shell "su -c 'cp -a /data/adb/modules/font-settings/webroot /data/local/tmp/webroot.bak'"
+adb shell "su -c 'cp -af /data/local/tmp/new-webroot/. /data/adb/modules/font-settings/webroot/ && cp -af /data/local/tmp/new-webroot/. /data/adb/font-settings/webui/'"
+adb shell "su -c 'chmod 0755 /data/adb/modules/font-settings/webroot/cgi-bin/exec /data/adb/font-settings/webui/cgi-bin/exec'"
+```
+
+替换后用 `node webui/tests/live-check.mjs http://127.0.0.1:7125` 确认真实数据链路，正常的备份在 `/data/local/tmp/webroot.bak`。
 
 使用 `package-font-settings.ps1` 分别打包完整版与精简版（内部使用支持 ZIP 的 bsdtar，确保 ZIP 内路径使用 Android 兼容的 `/`）：
 
@@ -269,11 +288,11 @@ sh tests/fontconfig-test.sh
 .\package-font-settings.ps1 -Edition lite
 ```
 
-本版本已在 OPPO PHY110（Android 16 / API 36 / KernelSU 3.2.4）实机验证：动态生成的字体配置可解析且 magic mount 生效、无 minikin/font 报错；中英文字体链的添加、删除、排序与缺字回退后端命令均通过；字重偏移、钳制与非法值回退通过 fontconfig 夹具测试，`weight-set` 写入、状态回读与字体配置重生成在设备上验证；“删除全部字体恢复系统默认”用例通过夹具验证（生成结果与原设备配置逐字节一致、零 `FontSetting` 引用），单角色清空另一角色保留的混合场景同样通过，模块升级保留仅含 `-N` 槽位的字体链在设备上实测；内置 WebUI 服务与 `service.sh` 自愈流程在真实“安装异常”现场验证；v2.4.0 的界面在 412×892dp 视口以 `node webui/tests/ui-smoke.mjs` 验证（列表结构、动效类、预览面板叠加关系、56dp 圆形图标按钮、强调字重、离线字体加载、深浅色 token 与系统回退配色、无横向溢出、后退手势等 35 项断言，浅色与深色各跑一遍）；所有 shell 脚本通过 `sh -n` 语法检查。
+本版本已在 OPPO PHY110（Android 16 / API 36 / KernelSU 3.2.4）实机验证：动态生成的字体配置可解析且 magic mount 生效、无 minikin/font 报错；中英文字体链的添加、删除、排序与缺字回退后端命令均通过；字重偏移、钳制与非法值回退通过 fontconfig 夹具测试，`weight-set` 写入、状态回读与字体配置重生成在设备上验证；“删除全部字体恢复系统默认”用例通过夹具验证（生成结果与原设备配置逐字节一致、零 `FontSetting` 引用），单角色清空另一角色保留的混合场景同样通过，模块升级保留仅含 `-N` 槽位的字体链在设备上实测；内置 WebUI 服务与 `service.sh` 自愈流程在真实“安装异常”现场验证；WebUI 在 412×892dp 视口以 `node webui/tests/ui-smoke.mjs` 验证（图标连字、离线字体、顶栏收起、列表与链结结构、滑杆命令、对话框校验、底部弹层、深浅色 token、快速切换标签、360dp 窄屏无横向溢出、减少动态效果与后退等 56 项断言），并用 `node webui/tests/screenshots.mjs` 生成浅色/深色全部屏幕截图；构建产物已安装到实机，`live-check` 对真实后端读通状态与字型链（无字形字节传输、无页面报错）；所有 shell 脚本通过 `sh -n` 语法检查。
 
 ## 许可与来源
 
-- 界面组件使用 Google Material Web 2.4.0（Apache License 2.0）；`about` 与 `donate` 页面仍使用 MDUI 2.1.5（MIT License，`webroot/vendor/MDUI-LICENSE.txt`）。
+- 界面组件为按 Material Design 3 规范自行实现，不捆绑第三方组件运行时；`about` 与 `donate` 页面仍使用 MDUI 2.1.5（MIT License，`webroot/vendor/MDUI-LICENSE.txt`）。
 - 字体：Roboto Flex 与 Material Symbols Rounded 取自 Google Fonts，Apache License 2.0，已按用到的字符与图标子集化并离线打包在 `webroot/assets/fonts/`。
 - 动态色板使用 Google Material Color Utilities 0.3.0，Apache License 2.0 已包含在 `webroot/vendor/MaterialColorUtilities-LICENSE.txt`。
 - 动态生成器只使用安装设备自身的 Android 字体配置，不再内置或分发任何特定 ROM 的 XML。

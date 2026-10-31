@@ -12,7 +12,7 @@
 const SEED_CACHE_KEY = "font-settings.theme-seed.v2";
 const FALLBACK_SEED = "#6750a4";
 
-/** Roles that the UI (and Material Web) consume. */
+/** Roles that the UI consumes. */
 const TOKEN_MAP = {
   primary: "primary",
   "on-primary": "onPrimary",

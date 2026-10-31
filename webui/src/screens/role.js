@@ -1,4 +1,4 @@
-/** The 漢字字型 / 拉丁文字型 screens: family chain, control cards and the add FAB. */
+/** The 漢字字型 / 拉丁文字型 screens: fallback chain, control cards and the add FAB. */
 
 import { t } from "../i18n.js";
 import { formatBytes, normalizeWeight, normalizeWesternSize } from "../module-api.js";
@@ -8,6 +8,7 @@ import {
   el,
   escapeHtml,
   icon,
+  openDialog,
   wireAppBarScroll,
 } from "../ui.js";
 
@@ -16,7 +17,7 @@ const ROLE_COPY = {
   western: { titleKey: "latinFont", familyKey: "editLatinFamily" },
 };
 
-function chainMeta(role, font, index) {
+function chainMeta(font, index) {
   return t("chainMeta", {
     index: index + 1,
     size: formatBytes(font.size),
@@ -38,19 +39,32 @@ export function buildRoleScreen(ctx, role) {
   let hasVariable = chain.some((font) => font.variable);
 
   const screen = el(`<section class="screen" data-screen="${role}">
-    <header class="screen-header">
-      <md-icon-button variant="tonal" data-back aria-label="${escapeHtml(t("appTitle"))}">
+    <header class="app-bar">
+      <button class="icon-btn" type="button" data-back aria-label="${escapeHtml(t("appTitle"))}">
         ${icon("arrow_back")}
-      </md-icon-button>
-      <h1 class="screen-title typescale-title-large">${escapeHtml(t(copy.titleKey))}</h1>
+      </button>
+      <h1 class="app-bar-title">${escapeHtml(t(copy.titleKey))}</h1>
+      <span class="spacer"></span>
+      <span class="chip" data-count hidden></span>
     </header>
+
     <div class="screen-content">
-      <h2 class="section-label typescale-title-medium-emphasized">${escapeHtml(t(copy.familyKey))}</h2>
-      <div data-progress hidden>
-        <md-linear-progress indeterminate></md-linear-progress>
+      <div class="hero">
+        <h2 class="hero-title t-headline">${escapeHtml(t(copy.titleKey))}</h2>
+        <p class="hero-sub t-body">${escapeHtml(t("chainHint"))}</p>
       </div>
+
+      <div class="progress-wrap" data-progress hidden>
+        <div class="progress" data-indeterminate="true"><span class="progress-bar"></span></div>
+        <span class="t-support" data-progress-text></span>
+      </div>
+
       <div data-chain></div>
-      <div class="card-stack" data-controls></div>
+
+      <div data-controls-wrap hidden>
+        <h3 class="section-title">${escapeHtml(t("sectionAdjust"))}</h3>
+        <div class="card-stack" data-controls></div>
+      </div>
     </div>
   </section>`);
 
@@ -58,7 +72,10 @@ export function buildRoleScreen(ctx, role) {
 
   const chainHost = screen.querySelector("[data-chain]");
   const controlsHost = screen.querySelector("[data-controls]");
+  const controlsWrap = screen.querySelector("[data-controls-wrap]");
   const progressHost = screen.querySelector("[data-progress]");
+  const progressText = screen.querySelector("[data-progress-text]");
+  const countChip = screen.querySelector("[data-count]");
 
   let chainSignature = null;
   let controlsSignature = null;
@@ -68,57 +85,75 @@ export function buildRoleScreen(ctx, role) {
     if (signature === chainSignature) return;
     chainSignature = signature;
     chainHost.textContent = "";
+
     if (!chain.length) {
-      chainHost.append(
-        el(`<div class="empty-state">
-          ${icon("upload_file")}
-          <div class="typescale-title-medium-emphasized">${escapeHtml(t("emptyTitle"))}</div>
-          <p class="typescale-body-medium">${escapeHtml(t("emptyHint"))}</p>
-          <md-filled-tonal-button data-empty-add>${escapeHtml(t("addFont"))}</md-filled-tonal-button>
-        </div>`),
-      );
-      chainHost.querySelector("[data-empty-add]").addEventListener("click", () => ctx.actions.addFont(role));
+      const empty = el(`<div class="empty-state">
+        ${icon("upload_file")}
+        <span class="t-title">${escapeHtml(t("emptyTitle"))}</span>
+        <p class="t-support">${escapeHtml(t("emptyHint"))}</p>
+        <button class="btn" type="button" data-variant="tonal" data-empty-add>
+          ${icon("add")}${escapeHtml(t("addFont"))}
+        </button>
+      </div>`);
+      empty.querySelector("[data-empty-add]").addEventListener("click", () => ctx.actions.addFont(role));
+      chainHost.append(empty);
       return;
     }
+
     const group = el('<div class="list-group"></div>');
     chain.forEach((font, index) => {
-      const row = el(`<div class="chain-row" data-shape="${shapeFor(index, chain.length)}" data-name="${escapeHtml(font.name)}" data-index="${index}">
-        <span class="chain-handle press-scale" role="button" tabindex="0" aria-label="${escapeHtml(t("dragToReorder"))}" title="${escapeHtml(t("dragToReorder"))}">
-          ${icon("drag_handle")}
-        </span>
-        <div class="chain-copy">
+      const row = el(`<div class="chain-row" data-shape="${shapeFor(index, chain.length)}" data-name="${escapeHtml(
+        font.name,
+      )}" data-index="${index}" role="button" tabindex="0">
+        <span class="chain-index" aria-hidden="true">${index + 1}</span>
+        <span class="chain-copy">
           <span class="chain-name">${escapeHtml(font.displayName)}</span>
-          <span class="chain-meta">${escapeHtml(chainMeta(role, font, index))}</span>
-        </div>
-        <md-icon-button size="s" data-detail aria-label="${escapeHtml(t("fontDetail"))}">
+          <span class="chain-meta">${escapeHtml(chainMeta(font, index))}</span>
+        </span>
+        <span class="chain-handle press-scale" role="button" tabindex="0" aria-label="${escapeHtml(
+          t("dragToReorder"),
+        )}">
+          ${icon("drag_indicator")}
+        </span>
+        <button class="icon-btn" type="button" data-detail aria-label="${escapeHtml(t("fontDetail"))}">
           ${icon("more_vert")}
-        </md-icon-button>
+        </button>
       </div>`);
+
+      const openDetail = () => ctx.actions.openFontDetail(role, font, index, chain.length);
       row.querySelector("[data-detail]").addEventListener("click", (event) => {
         event.stopPropagation();
-        ctx.actions.openFontDetail(role, font, index, chain.length);
+        openDetail();
       });
-      row.addEventListener("click", () => {
+      row.addEventListener("click", (event) => {
+        if (event.target instanceof Element && event.target.closest(".chain-handle")) return;
         // A drag that ended just now also fires a click; swallow it so the
         // detail dialog does not pop open right after reordering.
         if (ctx.state.dragMoved) {
           ctx.state.dragMoved = false;
           return;
         }
-        ctx.actions.openFontDetail(role, font, index, chain.length);
+        openDetail();
       });
+      row.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        if (event.target !== row) return;
+        event.preventDefault();
+        openDetail();
+      });
+
       const handle = row.querySelector(".chain-handle");
       handle.addEventListener(
         "touchstart",
         (event) => {
           const touch = event.touches[0];
-          if (touch) startDrag(ctx, screen, role, index, row, touch.clientY, "touch");
+          if (touch) startDrag(ctx, role, index, row, touch.clientY, "touch");
         },
         { passive: true },
       );
       handle.addEventListener("mousedown", (event) => {
         if (event.button !== 0) return;
-        startDrag(ctx, screen, role, index, row, event.clientY, "mouse");
+        startDrag(ctx, role, index, row, event.clientY, "mouse");
       });
       group.append(row);
     });
@@ -130,6 +165,8 @@ export function buildRoleScreen(ctx, role) {
     if (signature === controlsSignature) return;
     controlsSignature = signature;
     controlsHost.textContent = "";
+    controlsWrap.hidden = !(role === "western" || hasVariable);
+
     if (role === "western") {
       controlsHost.append(
         controlCard({
@@ -158,14 +195,11 @@ export function buildRoleScreen(ctx, role) {
     }
   }
 
-  /* The add FAB is anchored to the bottom-right corner of the app column (like
-     Google Keep) instead of scrolling away with the font chain: it lives in the
-     shell's FAB layer, which only shows it while this screen is on top. */
-  const fab = el(`<md-fab size="medium" class="screen-fab" data-fab-owner="${role}" aria-label="${escapeHtml(
-    t("addFont"),
-  )}">
-    ${icon("add", { slot: "icon" })}
-  </md-fab>`);
+  /* The add FAB lives in the shell's FAB layer so it stays pinned to the
+     bottom-right corner while the chain scrolls. */
+  const fab = el(`<button class="fab" type="button" data-fab-owner="${role}" aria-label="${escapeHtml(t("addFont"))}">
+    ${icon("add")}
+  </button>`);
   fab.addEventListener("click", () => ctx.actions.addFont(role));
   const fabLayer = document.querySelector("[data-fab-layer]");
   fabLayer?.querySelector(`[data-fab-owner="${role}"]`)?.remove();
@@ -175,18 +209,26 @@ export function buildRoleScreen(ctx, role) {
     status = next.status;
     chain = status ? status.chains[role] : [];
     hasVariable = chain.some((font) => font.variable);
+
+    countChip.hidden = chain.length === 0;
+    countChip.textContent = t("fontCountUnitCount", { count: chain.length });
+
     renderChain();
     renderControls();
 
     const uploading = next.upload && next.upload.role === role;
     progressHost.hidden = !uploading;
     if (uploading) {
-      const indicator = progressHost.querySelector("md-linear-progress");
+      const indicator = progressHost.querySelector(".progress");
+      const bar = progressHost.querySelector(".progress-bar");
       if (typeof next.upload.percent === "number") {
-        indicator.indeterminate = false;
-        indicator.value = next.upload.percent;
+        indicator.dataset.indeterminate = "false";
+        bar.style.width = `${Math.round(next.upload.percent * 100)}%`;
+        progressText.textContent = t("uploadProgress", { percent: Math.round(next.upload.percent * 100) });
       } else {
-        indicator.indeterminate = true;
+        indicator.dataset.indeterminate = "true";
+        bar.style.width = "";
+        progressText.textContent = t("readingFile");
       }
     }
     fab.disabled = Boolean(next.busy);
@@ -200,18 +242,16 @@ export function buildRoleScreen(ctx, role) {
 
 /* --------------------------------------------------------------- reordering */
 
-function startDrag(ctx, screen, role, index, row, clientY, type) {
+function startDrag(ctx, role, index, row, clientY, type) {
   if (ctx.state.busy) return;
   const rect = row.getBoundingClientRect();
   const state = {
-    role,
     index,
     row,
     grabOffsetY: clientY - rect.top,
     originalTop: rect.top,
     height: rect.height,
     moved: false,
-    dy: 0,
     raf: 0,
   };
   ctx.state.dragState = state;
@@ -219,12 +259,12 @@ function startDrag(ctx, screen, role, index, row, clientY, type) {
   row.classList.add("chain-dragging");
 
   function onMove(y) {
-    state.dy = y - state.grabOffsetY - state.originalTop;
-    if (Math.abs(state.dy) > 4) state.moved = true;
+    const dy = y - state.grabOffsetY - state.originalTop;
+    if (Math.abs(dy) > 4) state.moved = true;
     if (!state.raf) {
       state.raf = requestAnimationFrame(() => {
         state.raf = 0;
-        row.style.transform = `translateY(${state.dy}px)`;
+        row.style.transform = `translateY(${dy}px)`;
       });
     }
   }
@@ -289,26 +329,27 @@ function startDrag(ctx, screen, role, index, row, clientY, type) {
 /* ----------------------------------------------------------- detail dialog */
 
 export async function openFontDetailDialog(ctx, role, font, index, total) {
-  const dialog = el(`<md-dialog>
-    <div slot="headline" class="typescale-title-large">${escapeHtml(t("fontDetail"))}</div>
-    <div slot="content" class="dialog-body">
-      <div class="status-line"><span class="typescale-body-medium">${escapeHtml(t("fontDetailFile"))}</span><span class="spacer"></span><span class="typescale-body-large">${escapeHtml(font.displayName)}</span></div>
-      <div class="status-line"><span class="typescale-body-medium">${escapeHtml(t("fontDetailSize"))}</span><span class="spacer"></span><span class="typescale-body-large">${escapeHtml(formatBytes(font.size))}</span></div>
-      <div class="status-line"><span class="typescale-body-medium">${escapeHtml(t("fontDetailKind"))}</span><span class="spacer"></span><span class="typescale-body-large">${escapeHtml(t(font.variable ? "variableFont" : "staticFont"))}</span></div>
-      <div class="status-line"><span class="typescale-body-medium">${escapeHtml(t("fontDetailSlot"))}</span><span class="spacer"></span><span class="typescale-body-large">#${index + 1} / ${total}</span></div>
-    </div>
-    <div slot="actions" class="dialog-actions">
-      <md-text-button value="replace">${escapeHtml(t("replaceFont"))}</md-text-button>
-      <md-text-button value="remove" class="danger">${escapeHtml(t("removeFont"))}</md-text-button>
-      <md-filled-button value="close">${escapeHtml(t("close"))}</md-filled-button>
-    </div>
-  </md-dialog>`);
-  const removeButton = dialog.querySelector('[value="remove"]');
-  removeButton.style.setProperty("--md-text-button-label-text-color", "var(--md-sys-color-error)");
-  document.body.append(dialog);
-  const { openDialog } = await import("../ui.js");
-  const result = await openDialog(dialog);
-  dialog.remove();
+  const row = (label, value) => `<div class="status-line">
+    <span class="t-support">${escapeHtml(label)}</span>
+    <span class="status-value">${escapeHtml(value)}</span>
+  </div>`;
+
+  const result = await openDialog({
+    title: t("fontDetail"),
+    body: [
+      row(t("fontDetailFile"), font.displayName),
+      row(t("fontDetailSize"), formatBytes(font.size)),
+      row(t("fontDetailKind"), t(font.variable ? "variableFont" : "staticFont")),
+      row(t("fontDetailSlot"), `#${index + 1} / ${total}`),
+    ].join(""),
+    actions: [
+      { value: "cancel", label: t("close"), variant: "text" },
+      { value: "remove", label: t("removeFont"), variant: "text", tone: "danger" },
+      { value: "replace", label: t("replaceFont"), variant: "filled" },
+    ],
+    stacked: true,
+  });
+
   if (result === "remove") {
     const confirmed = await confirmDialog({
       headline: t("deleteDialogHeadline"),

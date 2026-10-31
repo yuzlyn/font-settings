@@ -6,6 +6,7 @@
     <meta name="color-scheme" content="light dark">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>字型設定</title>
+    <link rel="icon" href="data:,">
     <link rel="stylesheet" href="assets/fonts/fonts.css?v=__VERSION__">
     <link rel="stylesheet" href="styles.css?v=__VERSION__">
     <script src="vendor/material-kolor.js?v=__VERSION__"></script>
@@ -77,7 +78,9 @@
         <strong class="typescale-title-medium-emphasized">WebUI 無法啟動</strong>
         <pre id="boot-error-text" class="typescale-body-medium"></pre>
       </div>
-      <md-linear-progress data-boot-progress indeterminate aria-label="Loading"></md-linear-progress>
+      <div class="boot-progress" data-boot-progress aria-hidden="true">
+        <div class="progress" data-indeterminate="true"><span class="progress-bar"></span></div>
+      </div>
       <div class="screen-stack" data-screen-stack></div>
       <!-- Floating action buttons live outside the scrolling screens so they
            stay pinned to the bottom-right corner while a list scrolls. -->

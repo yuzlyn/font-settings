@@ -1,13 +1,13 @@
 /**
  * Font Settings WebUI - Material 3 Expressive application shell.
  *
- * Screens: 字型設定 (menu), 中文字型, 西文字型, Emoji 設定.
+ * Screens: 字型設定 (menu), 漢字字型, 拉丁文字型, Emoji 設定.
  * Screen transitions use the standard motion scheme: the Chinese screen slides
  * in from the right, the Latin screen from the left, and going back replays
  * the entry animation in reverse (including the system back gesture).
  */
 
-import "./material.js";
+
 
 import { applyTheme, getThemeState, onThemeChange, updateAccentSeed, watchSystemTheme } from "./theme.js";
 import { describeError, locale, t } from "./i18n.js";
@@ -113,8 +113,10 @@ function renderScreen(id, { entering = null, leaving = null, direction = "right"
   screenCache.set(id, { element, stamp: state.statusStamp });
   // The screen may have created its FAB while building, so sync afterwards.
   syncFabs(element);
+  // A cached screen can still carry the fade-out class (or a pending hide
+  // timer) from a transition that was interrupted by coming back to it.
+  element.classList.remove("screen-leave-to-left", "screen-leave-to-right");
   if (entering) element.classList.add(`screen-enter-from-${entering}`);
-  // A cached screen may still be hidden from an earlier transition.
   element.hidden = false;
   if (!element.isConnected) stackHost.append(element);
 
@@ -136,18 +138,15 @@ function renderScreen(id, { entering = null, leaving = null, direction = "right"
     if (outgoing) {
       outgoing.classList.remove("screen-active");
       outgoing.classList.add(`screen-leave-to-${direction}`);
-      outgoing.addEventListener(
-        "transitionend",
-        () => {
-          outgoing.hidden = true;
-          outgoing.classList.remove(`screen-leave-to-${direction}`);
-        },
-        { once: true },
-      );
-      window.setTimeout(() => {
+      // A fast tab switch can bring this screen back before the fade ends;
+      // never hide a screen that is active again.
+      const settle = () => {
+        if (outgoing.classList.contains("screen-active")) return;
         outgoing.hidden = true;
         outgoing.classList.remove(`screen-leave-to-${direction}`);
-      }, 600);
+      };
+      outgoing.addEventListener("transitionend", settle, { once: true });
+      window.setTimeout(settle, 600);
     }
   });
   return element;

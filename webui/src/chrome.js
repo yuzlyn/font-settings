@@ -1,8 +1,8 @@
 /**
  * App chrome shared by the shell: the M3 navigation bar (字型 / 介紹 / 關於).
  *
- * It is not a screen: it lives in the shell as a sibling of the screen stack
- * (like the FAB layer) so it never scrolls away.
+ * It is not a screen: it lives in the shell below the screen stack, so it never
+ * scrolls away and never takes part in the screen transitions.
  */
 
 import { t } from "./i18n.js";
@@ -12,7 +12,7 @@ export const TAB_IDS = ["menu", "readme", "about"];
 
 const NAV_ITEMS = [
   { id: "menu", icon: "text_fields", labelKey: "navFonts" },
-  { id: "readme", icon: "list", labelKey: "navIntro" },
+  { id: "readme", icon: "menu_book", labelKey: "navIntro" },
   { id: "about", icon: "info", labelKey: "navAbout" },
 ];
 
@@ -20,9 +20,10 @@ const NAV_ITEMS = [
 export function buildNavBar(ctx) {
   const bar = el(`<nav class="nav-bar" data-nav-bar aria-label="${escapeHtml(t("appTitle"))}">
     ${NAV_ITEMS.map(
-      (item) => `<button class="nav-item" data-nav="${item.id}" aria-label="${escapeHtml(t(item.labelKey))}">
-        <span class="nav-indicator" aria-hidden="true"></span>
-        ${icon(item.icon)}
+      (item) => `<button class="nav-item" type="button" data-nav="${item.id}" aria-current="false" aria-label="${escapeHtml(
+        t(item.labelKey),
+      )}">
+        <span class="nav-indicator">${icon(item.icon)}</span>
         <span class="nav-label">${escapeHtml(t(item.labelKey))}</span>
       </button>`,
     ).join("")}
@@ -39,6 +40,7 @@ export function syncNavBar(bar, activeScreen) {
   const isTab = TAB_IDS.includes(activeScreen);
   bar.dataset.visible = String(isTab);
   for (const button of bar.querySelectorAll(".nav-item")) {
-    button.classList.toggle("selected", isTab && button.dataset.nav === activeScreen);
+    const active = isTab && button.dataset.nav === activeScreen;
+    button.setAttribute("aria-current", active ? "page" : "false");
   }
 }

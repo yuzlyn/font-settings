@@ -1,7 +1,7 @@
 /**
  * Production build for the Font Settings WebUI.
  *
- * - bundles the ES module sources (app + Material Web) into a single app.js
+ * - bundles the ES module sources (app + the local component layer) into app.js
  * - copies the token stylesheet, the shell HTML and the offline fonts
  * - writes everything into font-settings/webroot, which is what the module and
  *   the local busybox WebUI server ship
@@ -28,7 +28,7 @@ function copy(source, target) {
 function build() {
   fs.mkdirSync(outDir, { recursive: true });
 
-  // 1. Bundle the application (Material Web included) into one classic script.
+  // 1. Bundle the application and its component layer into one classic script.
   //    An IIFE is used on purpose: ES modules are rejected outright when a host
   //    serves the file with the wrong MIME type, while a classic script still
   //    runs (and KernelSU / KsuWebUI map .js to text/plain for unknown paths).

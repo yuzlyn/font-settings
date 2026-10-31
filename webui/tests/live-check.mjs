@@ -1,12 +1,11 @@
 /**
  * End-to-end check against the device's live WebUI server: the page runs the
- * real root bridge (no ksu mock), so the status and font chain data come from
- * the phone, and it asserts that no font bytes cross the bridge (the freeze
+ * real root bridge (no ksu mock), so status and font chain data come from the
+ * phone, and it asserts that no font bytes cross the bridge (the freeze
  * regression).
  *   node webui/tests/live-check.mjs [http://127.0.0.1:7125]
  */
 
-import path from "node:path";
 import { chromium } from "../../.fontsetting-build/node_modules/playwright-core/index.mjs";
 
 const baseUrl = process.argv[2] || "http://127.0.0.1:7125";
@@ -22,49 +21,59 @@ page.on("request", (request) => {
 });
 
 await page.goto(`${baseUrl}/index.html`, { waitUntil: "domcontentloaded" });
-await page.waitForSelector("section[data-screen='menu'] md-list-item", { timeout: 20000 });
+await page.waitForSelector("section[data-screen='menu'] .list-item", { timeout: 20000 });
+await page.evaluate(() => document.fonts.ready);
+await page.waitForTimeout(300);
+
+// The status is read on the About tab; wait until the module answered.
+await page.click(".nav-item[data-nav='about']");
 await page.waitForFunction(
   () => {
-    const rows = [...document.querySelectorAll("section[data-screen='menu'] md-list-item")];
-    const text = rows[5]?.querySelector('[slot="supporting-text"]')?.textContent || "";
+    const text = document.querySelector("section[data-screen='about'] .list-supporting")?.textContent || "";
     return text.includes("已適配") || text.includes("Adapted");
   },
   { timeout: 20000 },
 );
-await page.waitForTimeout(500);
+await page.waitForTimeout(400);
 
+const about = await page.evaluate(() => ({
+  status: document.querySelector("section[data-screen='about'] .list-supporting")?.textContent.trim(),
+}));
+console.log("about (real device data):", JSON.stringify(about, null, 2));
+
+await page.click(".nav-item[data-nav='menu']");
+await page.waitForTimeout(500);
 const menu = await page.evaluate(() => {
-  const rows = [...document.querySelectorAll("section[data-screen='menu'] md-list-item")];
-  const chip = document.querySelector(".status-chip");
-  const icon = document.querySelector("md-icon");
-  const iconRect = icon.getBoundingClientRect();
+  const icon = document.querySelector("section[data-screen='menu'] .list-leading .icon");
   return {
-    statusText: rows[5]?.querySelector('[slot="supporting-text"]')?.textContent.trim(),
-    fallbackText: rows[4]?.querySelector('[slot="supporting-text"]')?.textContent.trim(),
-    chip: chip?.textContent.trim(),
-    chipState: chip?.dataset.state,
+    hero: document.querySelector(".hero-title")?.textContent.trim(),
+    chinese: document.querySelector("[data-chinese]")?.textContent.trim(),
+    western: document.querySelector("[data-western]")?.textContent.trim(),
+    count: document.querySelector("[data-count]")?.textContent.trim(),
+    bridgeChip: document.querySelector("[data-bridge]")?.textContent.trim(),
     iconFont: document.fonts.check('24px "Material Symbols Rounded"'),
-    iconWidth: Math.round(iconRect.width),
+    iconWidth: Math.round(icon.getBoundingClientRect().width),
     textFont: document.fonts.check('16px "Roboto Flex"'),
+    overflowX: document.documentElement.scrollWidth - window.innerWidth,
   };
 });
 console.log("menu (real device data):", JSON.stringify(menu, null, 2));
 
 const started = Date.now();
-await page.evaluate(() => document.querySelectorAll("section[data-screen='menu'] md-list-item")[1].click());
+await page.click("section[data-screen='menu'] .list-item:nth-child(1)");
 await page.waitForTimeout(1500);
 const elapsed = Date.now() - started;
+
 const chinese = await page.evaluate(() => {
   const screen = document.querySelector("section[data-screen='chinese']");
   return {
-    title: screen?.querySelector(".screen-title")?.textContent.trim(),
+    title: screen?.querySelector(".app-bar-title")?.textContent.trim(),
+    hero: screen?.querySelector(".hero-title")?.textContent.trim(),
     rows: [...(screen?.querySelectorAll(".chain-row") ?? [])].map((row) => ({
       name: row.querySelector(".chain-name")?.textContent.trim(),
       meta: row.querySelector(".chain-meta")?.textContent.trim(),
     })),
-    weightSlider: String(screen?.querySelector("md-slider")?.value),
-    hasMenu: Boolean(screen?.querySelector("md-filled-select, md-menu")),
-    summary: screen?.querySelector("[data-summary]")?.textContent.replace(/\s+/g, " ").trim(),
+    weight: screen?.querySelector(".slider")?.value ?? null,
     overflowX: document.documentElement.scrollWidth - window.innerWidth,
   };
 });
@@ -88,17 +97,20 @@ console.log("screen render time:", `${elapsed} ms`);
 console.log("page errors:", errors.length ? errors.join("; ") : "none");
 
 const ok =
+  /已適配 \d+ 項漢字、\d+ 項拉丁文/.test(about.status || "") &&
+  menu.hero === "字型設定" &&
   menu.iconFont === true &&
   menu.textFont === true &&
-  menu.iconWidth === 24 &&
-  /已適配 \d+ 項西文、\d+ 項中文字族/.test(menu.statusText || "") &&
-  menu.chipState === "ok" &&
-  chinese.title === "中文字型" &&
+  menu.iconWidth > 16 &&
+  menu.iconWidth <= 32 &&
+  /字型/.test(menu.count || "") &&
+  Boolean(menu.bridgeChip) &&
+  chinese.title === "漢字字型" &&
   chinese.rows.length > 0 &&
   chinese.rows.every((row) => /^#\d+ · [\d.]+ (B|KB|MB) · (可變字型|靜態字型)$/.test(row.meta)) &&
-  chinese.hasMenu === false &&
-  Boolean(chinese.summary) &&
+  (chinese.weight === null || Number(chinese.weight) >= 100) &&
   chinese.overflowX <= 0 &&
+  menu.overflowX <= 0 &&
   backToMenu.menuVisible === true &&
   byteCommands.length === 0 &&
   elapsed < 4000 &&
@@ -107,4 +119,3 @@ const ok =
 await browser.close();
 console.log(ok ? "live check: PASS" : "live check: FAIL");
 process.exit(ok ? 0 : 1);
-

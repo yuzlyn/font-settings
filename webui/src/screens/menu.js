@@ -1,79 +1,109 @@
 /**
- * Root screen (主頁 / 字型設定): the five-row editing list plus a font preview
- * card, under a top app bar whose trailing power_settings_new button reboots the
- * device and whose leading arrow_back exits the WebUI.
+ * Fonts tab (字型設定): the live preview of the active chains above the list of
+ * editing destinations, under a large app bar whose actions exit the WebUI and
+ * restart the device.
  *
- * The menu has no floating action button: everything it needs is a row in the
- * list. The bottom navigation bar (字型 / 介紹 / 關於) is provided by the shell.
+ * The screen patches itself in place: `update(state)` only rewrites text and the
+ * fallback switch, never the list structure.
  */
 
 import { t } from "../i18n.js";
-import { el, escapeHtml, icon, listGroup, wireAppBarScroll } from "../ui.js";
+import { createSwitch, el, escapeHtml, icon, listGroup, wireAppBarScroll } from "../ui.js";
 
-const AUTHOR_URL = "https://github.com/yuzlyn";
+const SAMPLE = "永字八法 Aa 0123";
 
-/** The active Chinese font name shown in the preview card. */
-function previewFontName(state) {
-  const chain = state?.status?.chains?.chinese ?? [];
-  const first = chain[0]?.displayName || chain[0]?.name;
-  return first || "NotoSans TC";
+/** Names of the chains, or a "system default" notice when a chain is empty. */
+function chainNames(state) {
+  const chinese = state?.status?.chains?.chinese ?? [];
+  const western = state?.status?.chains?.western ?? [];
+  return {
+    chinese: chinese[0]?.displayName || "",
+    western: western[0]?.displayName || "",
+    count: chinese.length + western.length,
+  };
 }
 
 export function buildMenuScreen(ctx) {
   const state = ctx.state;
+
   const screen = el(`<section class="screen" data-screen="menu">
-    <header class="screen-header">
-      <md-icon-button variant="tonal" data-back aria-label="${escapeHtml(t("exitWebui"))}">
-        ${icon("arrow_back")}
-      </md-icon-button>
-      <h1 class="screen-title typescale-title-large">${escapeHtml(t("appTitle"))}</h1>
+    <header class="app-bar" data-app-bar>
+      <span class="app-emblem" aria-hidden="true">${icon("text_fields")}</span>
+      <h1 class="app-bar-title">${escapeHtml(t("appTitle"))}</h1>
       <span class="spacer"></span>
-      <md-icon-button variant="tonal" data-reboot aria-label="${escapeHtml(t("rebootFab"))}">
+      <button class="icon-btn" type="button" data-exit aria-label="${escapeHtml(t("exitWebui"))}">
+        ${icon("logout")}
+      </button>
+      <button class="icon-btn" type="button" data-reboot aria-label="${escapeHtml(t("rebootFab"))}">
         ${icon("power_settings_new")}
-      </md-icon-button>
+      </button>
     </header>
+
     <div class="screen-content">
-      <h2 class="section-label typescale-title-medium-emphasized">${escapeHtml(t("sectionEdit"))}</h2>
-      <div data-edit></div>
-      <div class="elevated-card preview-card">
-        <div class="preview-media" role="img" aria-label="${escapeHtml(t("fontPreview"))}">
-          ${icon("text_fields")}
-          <span class="preview-sample" aria-hidden="true">字 Aa 永</span>
+      <div class="hero">
+        <div class="hero-eyebrow">
+          <span class="t-label">Font Settings</span>
+          <span class="t-label" data-version></span>
         </div>
-        <div class="preview-copy">
-          <div class="typescale-title-medium-emphasized">${escapeHtml(t("fontPreview"))}</div>
-          <div class="typescale-body-medium" data-preview-name></div>
+        <h2 class="hero-title t-display">${escapeHtml(t("appTitle"))}</h2>
+        <p class="hero-sub t-body">${escapeHtml(t("heroSubtitle"))}</p>
+        <div class="chip-row" data-chips>
+          <span class="chip" data-tone="primary">
+            ${icon("bolt")}<span data-bridge></span>
+          </span>
+          <span class="chip" data-count></span>
+          <span class="chip" data-tone="secondary" data-pending hidden>
+            ${icon("autorenew")}<span>${escapeHtml(t("statusPending"))}</span>
+          </span>
         </div>
+      </div>
+
+      <section class="card preview" data-tone="container">
+        <div class="card-head">
+          <div class="card-copy">
+            <h3 class="card-title t-title">${escapeHtml(t("fontPreview"))}</h3>
+            <span class="t-support" data-preview-caption></span>
+          </div>
+        </div>
+        <div class="preview-canvas">
+          <div class="preview-sample" aria-hidden="true">${SAMPLE}</div>
+        </div>
+        <div class="preview-meta">
+          <div class="preview-meta-row">
+            <span class="preview-meta-label t-support">${escapeHtml(t("chineseRole"))}</span>
+            <span class="preview-meta-value" data-chinese></span>
+          </div>
+          <div class="preview-meta-row">
+            <span class="preview-meta-label t-support">${escapeHtml(t("latinRole"))}</span>
+            <span class="preview-meta-value" data-western></span>
+          </div>
+        </div>
+      </section>
+
+      <div>
+        <h3 class="section-title">${escapeHtml(t("sectionEdit"))}</h3>
+        <div data-edit></div>
       </div>
     </div>
   </section>`);
 
-  screen.querySelector("[data-back]").addEventListener("click", () => {
+  screen.querySelector("[data-exit]").addEventListener("click", () => {
     if (history.length > 1) history.back();
     else window.close();
   });
   screen.querySelector("[data-reboot]").addEventListener("click", () => ctx.actions.reboot());
 
-  /* ------------------------------------------------------------ edit group */
-  const fallbackSwitch = el(`<md-switch ${state.status?.fallback ? "selected" : ""} aria-label="${escapeHtml(
-    t("fallbackLabel"),
-  )}"></md-switch>`);
-  fallbackSwitch.addEventListener("click", (event) => event.stopPropagation());
-  fallbackSwitch.addEventListener("change", () => ctx.actions.setFallback(Boolean(fallbackSwitch.selected)));
+  const fallbackSwitch = createSwitch({
+    selected: Boolean(state.status?.fallback),
+    ariaLabel: t("fallbackLabel"),
+    onChange: (selected) => ctx.actions.setFallback(selected),
+  });
 
   const editGroup = listGroup([
     {
-      headline: t("authorName"),
-      supporting: t("authorSupport"),
-      leading: "account_circle",
-      leadingFilled: true,
-      type: "link",
-      onClick: () => window.open(AUTHOR_URL, "_blank", "noopener"),
-    },
-    {
       headline: t("chineseFont"),
       supporting: t("chineseSupport"),
-      leading: "edit",
+      leading: "translate",
       onClick: () => ctx.actions.navigate("chinese", { direction: "right" }),
     },
     {
@@ -91,19 +121,48 @@ export function buildMenuScreen(ctx) {
     {
       headline: t("fallbackLabel"),
       supporting: t("fallbackSupport"),
-      leading: "sort",
+      leading: "call_split",
       trailing: fallbackSwitch,
-      onClick: () => fallbackSwitch.click(),
     },
   ]);
+
+  // Tapping anywhere on the fallback row toggles it, but a tap on the switch
+  // itself must not be applied twice (it would toggle back).
+  const fallbackRow = editGroup.lastElementChild;
+  fallbackRow.addEventListener("click", (event) => {
+    if (event.target instanceof Element && event.target.closest(".switch")) return;
+    fallbackSwitch.click();
+  });
+
   screen.querySelector("[data-edit]").append(editGroup);
 
-  const previewName = screen.querySelector("[data-preview-name]");
+  const versionHost = screen.querySelector("[data-version]");
+  const bridgeHost = screen.querySelector("[data-bridge]");
+  const countChip = screen.querySelector("[data-count]");
+  const pendingChip = screen.querySelector("[data-pending]");
+  const caption = screen.querySelector("[data-preview-caption]");
+  const chineseHost = screen.querySelector("[data-chinese]");
+  const westernHost = screen.querySelector("[data-western]");
 
   function update(next) {
-    const value = next.status?.fallback ?? true;
-    fallbackSwitch.selected = value;
-    previewName.textContent = t("fontPreviewFont", { name: previewFontName(next) });
+    const names = chainNames(next);
+    fallbackSwitch.selected = Boolean(next.status?.fallback);
+
+    versionHost.textContent = next.moduleVersion || "";
+    bridgeHost.textContent = t(ctx.actions.bridgeLabelKey());
+
+    if (names.count > 0) {
+      countChip.hidden = false;
+      countChip.textContent = t("fontCountUnitCount", { count: names.count });
+    } else {
+      countChip.hidden = true;
+    }
+
+    pendingChip.hidden = !next.status?.pendingReboot;
+
+    caption.textContent = t("fontPreviewFont", { name: names.chinese || t("fontCountEmpty") });
+    chineseHost.textContent = names.chinese || t("fontCountEmpty");
+    westernHost.textContent = names.western || t("fontCountEmpty");
   }
 
   update(state);
