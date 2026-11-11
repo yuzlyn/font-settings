@@ -1,5 +1,6 @@
 * text=auto
 *.sh text eol=lf
+*.awk text eol=lf
 *.js text eol=lf
 *.mjs text eol=lf
 *.xml text eol=lf
