@@ -6,6 +6,8 @@
 
 这是一个适用于 Android 8.0+ 的通用 KernelSU 字体模块，不限定手机品牌或 ROM。模块提供离线 WebUI，中文与西文各自可上传多个 `.ttf` 字体并按顺序组成 font-family 回退链（缺字自动回退，支持拖拽排序），上传可变字体后可调节 `100`–`900` 字重，并可选择内置 iOS、Google、Blobmoji、Facebook Emoji 或上传自定义 `.ttf/.otf`。所有替换均通过 KernelSU systemless mount 生效，不直接修改系统分区。
 
+**已适配 ColorOS 17（Android 17）**，ColorOS 16 同样支持；Android 17 把 `fonts.xml` 降级为兼容文件、默认字体改由 `font_fallback.xml` 提供，本版已按新结构处理。
+
 ## 下载
 
 - 完整包：[font-settings_v2.5.3_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.5.3/font-settings_v2.5.3_KSU.zip)，`170,889,372` 字节，SHA-256：`2A92FD0E321FAFC4B1F16254255B8D01053D464CEECFF38D9B1EF17FEDD285AF`。
