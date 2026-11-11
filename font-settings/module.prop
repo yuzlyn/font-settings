@@ -1,6 +1,6 @@
 id=font-settings
 name=Font Settings
-version=v2.5.2
-versionCode=252
+version=v2.5.3
+versionCode=253
 author=yuzlyn
-description=适用于 Android 8.0+ 的通用 KernelSU 字体与 Emoji 管理模块，安装时自动适配系统字体配置。
+description=适用于 Android 8.0+（含 Android 17 / ColorOS 17）的通用 KernelSU 字体与 Emoji 管理模块，安装时自动适配系统字体配置，系统升级后会自动重新抓取原始配置。

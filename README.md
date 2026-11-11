@@ -1,15 +1,17 @@
 # Font Settings
 
 - 作者：**yuzlyn**
-- 版本：**v2.5.2**
+- 版本：**v2.5.3**
 - 模块 ID：`font-settings`
 
 这是一个适用于 Android 8.0+ 的通用 KernelSU 字体模块，不限定手机品牌或 ROM。模块提供离线 WebUI，中文与西文各自可上传多个 `.ttf` 字体并按顺序组成 font-family 回退链（缺字自动回退，支持拖拽排序），上传可变字体后可调节 `100`–`900` 字重，并可选择内置 iOS、Google、Blobmoji、Facebook Emoji 或上传自定义 `.ttf/.otf`。所有替换均通过 KernelSU systemless mount 生效，不直接修改系统分区。
 
 ## 下载
 
-- 完整包：[font-settings_v2.5.2_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.5.2/font-settings_v2.5.2_KSU.zip)，`170,888,747` 字节，SHA-256：`C44D2BE1B6EAAFB2FE45A8FB4DA60BACE68BF35A5BED649E6CDDCDA81CFC54FE`。
-- 精简包：[font-settings_v2.5.2_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.5.2/font-settings_v2.5.2_lite_KSU.zip)，`25,168,020` 字节，SHA-256：`C648956C56AAE1A98463BEC228EAC47F64CFAD7408271BE608875222D29E9380`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+- 完整包：[font-settings_v2.5.3_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.5.3/font-settings_v2.5.3_KSU.zip)，`170,889,372` 字节，SHA-256：`2A92FD0E321FAFC4B1F16254255B8D01053D464CEECFF38D9B1EF17FEDD285AF`。
+- 精简包：[font-settings_v2.5.3_lite_KSU.zip](https://github.com/yuzlyn/font-settings/releases/download/v2.5.3/font-settings_v2.5.3_lite_KSU.zip)，`25,168,632` 字节，SHA-256：`E38EFA09D7467476E91CFD69C8B120684D7A77E54101F42DA8E40121F58BA04F`；移除 iOS、Google、Blobmoji、Facebook 四套内置 Emoji，仍可保持系统默认或上传自定义 Emoji。
+
+v2.5.3 适配 Android 17 / ColorOS 17。系统升级后模块原先会沿用升级前备份的 ROM 字体配置来生成 overlay，导致替换字体与新版系统的字体表对不上（表现为字体完全没生效），现在会比较备份与系统实际文件，不一致时重新抓取。Android 17 把 `fonts.xml` 降级为兼容文件，`sans-serif` 改由 `font_fallback.xml` 的单个可变槽位提供，直接改写会让替换后只剩 400 字重、粗体退化为伪粗体，现已自动展开为 `100`–`900` 九档，并补充 `roboto` family 映射。另修正运行期生成的配置文件 SELinux 标签（`adb_data_file` → `system_file`），避免 `system_server` 读取被拒导致整份字体配置加载失败。
 
 v2.5.2 重写 WebUI：移除 Material Web 运行时，改为自行实现的 Material 3 Expressive 渲染层，`app.js` 由 425 KiB 降到 90 KiB，图标字体按实际使用的 27 个图标重建；顶栏改为滚动收起的 large app bar，新增底部弹层、操作超过两个时纵向堆叠的对话框与 Expressive 滑块，触摸目标统一到 48dp。修复图标名不在子集时退化为文字、快速切换标签/返回时被上一段淡出定时器隐藏、英文窄屏横向溢出；新增真机 `live-check`（真实 root 后端）与 `device-check`（设备 busybox httpd 的 MIME/静态资源）与 56 项无头断言。
 

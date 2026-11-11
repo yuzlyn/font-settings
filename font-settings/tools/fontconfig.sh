@@ -89,7 +89,7 @@ read_role_chain() {
 
 valid_relative_path() {
   case "$1" in
-    etc/fonts.xml|etc/font_fallback.xml|system_ext/etc/fonts.xml|system_ext/etc/fonts_base.xml|product/etc/fonts.xml|product/etc/fonts_customization.xml|vendor/etc/fonts.xml) return 0 ;;
+    etc/fonts.xml|etc/font_fallback.xml|etc/fonts_customization.xml|system_ext/etc/fonts.xml|system_ext/etc/fonts_base.xml|system_ext/etc/fonts_customization.xml|product/etc/fonts.xml|product/etc/fonts_customization.xml|vendor/etc/fonts.xml) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -102,30 +102,61 @@ manifest_ready() {
   done < "$MANIFEST"
 }
 
+# Compares the stored ROM originals with the files currently installed. A system
+# update (ColorOS 16 -> 17) replaces them, and regenerating the overlay from the
+# pre-update copy is what leaves the module pointing at fonts the new build no
+# longer uses.
+configs_stale() {
+  manifest_ready || return 1
+  while IFS= read -r relative; do
+    saved="$ORIGINAL_DIR/$relative"
+    live="$SYSTEM_ROOT/$relative"
+    [ -f "$live" ] || continue
+    cmp -s "$saved" "$live" || return 0
+  done < "$MANIFEST"
+  return 1
+}
+
 capture_one() {
   source="$SYSTEM_ROOT$1"
   relative="$2"
+  saved="$ORIGINAL_DIR/$relative"
   [ -f "$source" ] || return 0
-  [ -f "$ORIGINAL_DIR/$relative" ] && return 0
-  mkdir -p "${ORIGINAL_DIR}/${relative%/*}" || fail "config_backup_failed"
-  cp -af "$source" "$ORIGINAL_DIR/$relative" || fail "config_backup_failed"
+
+  if [ -f "$saved" ]; then
+    if cmp -s "$saved" "$source"; then
+      printf '%s\n' "$relative" >> "$MANIFEST.new" || fail "config_manifest_failed"
+      return 0
+    fi
+    # 读到的可能就是本模块上一版生成的 overlay（OTA 后模块仍处于挂载状态），
+    # 这类文件不能当成 ROM 原始配置写回备份，保留旧备份更安全。
+    if grep -q 'FontSetting' "$source" 2>/dev/null; then
+      printf '%s\n' "$relative" >> "$MANIFEST.new" || fail "config_manifest_failed"
+      return 0
+    fi
+    echo "refresh=$relative" >&2
+  fi
+
+  mkdir -p "${saved%/*}" || fail "config_backup_failed"
+  cp -af "$source" "$saved" || fail "config_backup_failed"
   printf '%s\n' "$relative" >> "$MANIFEST.new" || fail "config_manifest_failed"
 }
 
 capture_configs() {
-  if manifest_ready; then
+  if manifest_ready && ! configs_stale; then
     echo "ok=capture"
     return 0
   fi
 
-  rm -rf "$ORIGINAL_DIR"
   mkdir -p "$ORIGINAL_DIR" "$DATA_DIR" || fail "config_backup_failed"
   : > "$MANIFEST.new" || fail "config_manifest_failed"
 
   capture_one /system/etc/fonts.xml etc/fonts.xml
   capture_one /system/etc/font_fallback.xml etc/font_fallback.xml
+  capture_one /system/etc/fonts_customization.xml etc/fonts_customization.xml
   capture_one /system_ext/etc/fonts.xml system_ext/etc/fonts.xml
   capture_one /system_ext/etc/fonts_base.xml system_ext/etc/fonts_base.xml
+  capture_one /system_ext/etc/fonts_customization.xml system_ext/etc/fonts_customization.xml
   if [ ! -f "$ORIGINAL_DIR/system_ext/etc/fonts_base.xml" ]; then
     capture_one /system/system_ext/etc/fonts_base.xml system_ext/etc/fonts_base.xml
   fi

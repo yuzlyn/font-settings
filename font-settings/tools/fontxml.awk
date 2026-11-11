@@ -16,7 +16,9 @@ function family_role(header, block,    name, lang, normalized) {
   normalized = "," lang ","
   gsub(/[[:space:]_]+/, "-", normalized)
 
-  if (name == "sans-serif" || name == "sys-sans-en" || name == "op-sans-en") {
+  # Android 17 (ColorOS 17) keeps the AOSP families plus a named "roboto"
+  # family in font_fallback.xml, which apps still request directly.
+  if (name == "sans-serif" || name == "sys-sans-en" || name == "op-sans-en" || name == "roboto") {
     return "western"
   }
   if (normalized ~ /[,;-](zh|yue)(-|[,;])/) {
@@ -82,6 +84,20 @@ function emit_family(    header, block, role, indent, i, j, opening, weight,
     slot_weight[1] = "400"
     slot_style[1] = ""
     slot_fallback[1] = ""
+  }
+
+  # Android 17 describes the primary families with a single flexible <font>
+  # (supportedAxes=...) instead of the 100-900 weight ladder. Rewriting such a
+  # family would leave one weight slot, so bold/medium text would fall back to
+  # synthetic bolding. Expand it to the standard 9 steps to keep full coverage.
+  if (nslot == 1 && (slot_weight[1] == "" || slot_weight[1] == "400") &&
+      slot_fallback[1] == "" && (slot_style[1] == "" || slot_style[1] == "normal")) {
+    for (s = 1; s <= 9; s++) {
+      slot_weight[s] = 100 * s
+      slot_style[s] = "normal"
+      slot_fallback[s] = ""
+    }
+    nslot = 9
   }
 
   if (role == "western") {

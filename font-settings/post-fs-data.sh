@@ -25,6 +25,13 @@ if [ -d "$BACKUP_DIR/data" ]; then
   done
 fi
 
+# Anything written into the module at runtime (WebUI font uploads, regenerated
+# font configs, restored backups) inherits u:object_r:adb_data_file:s0 from
+# /data/adb/modules, and system_server cannot read that label. The visible
+# symptom is "SystemFonts: open failed: EACCES" followed by the stock fonts
+# coming back. Force the label the stock files use.
+chcon -R u:object_r:system_file:s0 "$MODDIR/system" 2>/dev/null
+
 chmod 0644 "$MODDIR/system/fonts/FontSettingChinese.ttf" 2>/dev/null
 chmod 0644 "$MODDIR/system/fonts/FontSettingWestern.ttf" 2>/dev/null
 for list in chinese.list western.list; do
